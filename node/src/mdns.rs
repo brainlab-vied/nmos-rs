@@ -177,12 +177,28 @@ impl MdnsContext {
     }
 
     pub fn new(_config: &NmosMdnsConfig, tx: mpsc::UnboundedSender<NmosMdnsEvent>) -> MdnsContext {
-        // Create registration browser
+        // From NMOS documentation: https://specs.amwa.tv/is-04/releases/v1.3.2/docs/Upgrade_Path.html#requirements-for-nodes-node-apis
+        // > Where a Node implements version v1.2 or below, 
+        // > it MUST browse for both the _nmos-register._tcp DNS-SD service type, 
+        // > and the legacy _nmos-registration._tcp DNS-SD service type in order to 
+        // > retrieve the full list of available Registration APIs. 
+        // > De-duplication SHOULD be performed against this returned list.      
+
+        // Create registration browser for API v1.2+
         let mut register_browser =
             MdnsBrowser::new(ServiceType::new("nmos-register", "tcp").unwrap());
 
         register_browser.set_context(Box::new(tx.clone()));
         register_browser.set_service_discovered_callback(Box::new(|r, c| {
+            Self::on_service_discovered(NmosMdnsService::Registration, r, &c);
+        }));
+
+        // Create registration browser for API v1.0-v1.1
+        let mut register_browser_legacy =
+            MdnsBrowser::new(ServiceType::new("nmos-registration", "tcp").unwrap());
+
+        register_browser_legacy.set_context(Box::new(tx.clone()));
+        register_browser_legacy.set_service_discovered_callback(Box::new(|r, c| {
             Self::on_service_discovered(NmosMdnsService::Registration, r, &c);
         }));
 
