@@ -180,4 +180,15 @@ impl RegistrationApi {
 
         Ok(())
     }
+    //
+    // pub async fn delete_resource(
+    //     client: &reqwest::Client,
+    //     resource: &resource::ResourceCore,
+    //     registry: &NmosMdnsRegistry)
+    //     -> Result<(), Box<dyn std::error::Error>>
+    // {
+    //     let resource_id = resource.id;
+    //
+    //     Ok(())
+    // }
 }

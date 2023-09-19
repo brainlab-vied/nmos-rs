@@ -13,8 +13,8 @@ pub struct Model {
     // IS-04 resources
     nodes: RwLock<HashMap<Uuid, Node>>,
     devices: RwLock<HashMap<Uuid, Device>>,
-    sources: RwLock<HashMap<Uuid, Source>>,
-    flows: RwLock<HashMap<Uuid, Flow>>,
+    pub sources: RwLock<HashMap<Uuid, Source>>,
+    pub flows: RwLock<HashMap<Uuid, Flow>>,
     senders: RwLock<HashMap<Uuid, Sender>>,
     receivers: RwLock<HashMap<Uuid, Receiver>>,
 }
@@ -119,6 +119,24 @@ impl Model {
     pub async fn flows(&self) -> RwLockReadGuard<'_, HashMap<Uuid, Flow>> {
         self.flows.read().await
     }
+
+    // pub async fn find_node(&self, label: &str) -> Option<&Node>
+    // {
+    //     self.nodes().await.find(|&&node| { node.core.label == label })
+    // }
+
+    // pub async fn find_source(&self, label: &str) -> Option<&Source>
+    // {
+    //     let sources = self.sources().await;
+    //     let key = sources.iter().find(|(_, &ref source)| { source.core.label == label })?.0;
+    //
+    //     sources.get(&key.clone())
+    // }
+    //
+    // pub async fn find_flow(&self, label: &str) -> Option<&Flow>
+    // {
+    //     self.flows().await.values().find(|&&flow| { flow.core.label == label })
+    // }
 
     pub async fn insert_node(&self, node: Node) -> Option<()> {
         let mut nodes = self.nodes.write().await;

@@ -112,6 +112,7 @@ impl PartialOrd for NmosMdnsRegistry {
 pub struct MdnsContext {
     // Browsers and services
     register_browser: Option<MdnsBrowser>,
+    register_browser_legacy: Option<MdnsBrowser>,
     node_service: Option<MdnsService>,
     _query_service: Option<MdnsService>,
 }
@@ -215,6 +216,7 @@ impl MdnsContext {
 
         MdnsContext {
             register_browser: Some(register_browser),
+            register_browser_legacy: Some(register_browser_legacy),
             node_service: Some(node_service),
             _query_service: None,
         }
@@ -228,6 +230,14 @@ impl MdnsContext {
                 register_browser
                     .browse_services()
                     .expect("Register event handler"),
+            );
+        }
+
+        if let Some(register_browser_legacy) = &mut self.register_browser_legacy {
+            event_loops.push(
+                register_browser_legacy
+                    .browse_services()
+                    .expect("Register legacy event handler"),
             );
         }
 

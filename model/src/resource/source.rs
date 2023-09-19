@@ -34,6 +34,11 @@ impl SourceBuilder {
         self
     }
 
+    pub fn with_parent(mut self, parent: &Source) -> Self {
+        self.parents.push(parent.core.id);
+        self
+    }
+
     #[must_use]
     pub fn build(self) -> Source {
         Source {

@@ -34,6 +34,11 @@ impl FlowBuilder {
         self
     }
 
+    pub fn with_parent(mut self, parent: &Flow) -> Self {
+        self.parents.push(parent.core.id);
+        self
+    }
+
     pub fn tag<S, V>(mut self, key: S, values: V) -> Self
     where
         S: Into<String>,

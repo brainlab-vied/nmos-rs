@@ -25,7 +25,7 @@ use mdns::{NmosMdnsConfig, NmosMdnsEvent, NmosMdnsRegistry};
 
 #[derive(Default)]
 #[must_use]
-pub struct NodeBuilder {
+pub struct NodeBuilder{
     model: Model,
     event_handler: Option<Arc<dyn EventHandler>>,
 }
@@ -115,7 +115,7 @@ impl Node {
 
         // Receive MDNS events in "main thread"
         let mdns_receiver = async {
-            let registries = registries.clone();
+            //let registries = self.registries.clone();
 
             while let Some(event) = rx.recv().await {
                 if let NmosMdnsEvent::Discovery(_, Ok(discovery)) = event {
@@ -176,8 +176,18 @@ impl Node {
                     base.join(&format!("health/nodes/{}", node_id)).unwrap()
                 };
 
-                // Send heartbeat every 5 seconds
+                // Update model and send heartbeat every 5 seconds
                 loop {
+                    match RegistrationApi::register_resources(&client, self.model.clone(), &registry)
+                        .await
+                    {
+                        Ok(_) => info!("Update successful"),
+                        Err(err) => {
+                            error!("Failed to update registry: {}", err);
+                            continue;
+                        }
+                    }
+
                     match client.post(heartbeat_url.clone()).send().await {
                         Ok(res) => {
                             if !res.status().is_success() {
