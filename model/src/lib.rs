@@ -12,7 +12,7 @@ use uuid::Uuid;
 pub struct Model {
     // IS-04 resources
     nodes: RwLock<HashMap<Uuid, Node>>,
-    devices: RwLock<HashMap<Uuid, Device>>,
+    pub devices: RwLock<HashMap<Uuid, Device>>,
     pub sources: RwLock<HashMap<Uuid, Source>>,
     pub flows: RwLock<HashMap<Uuid, Flow>>,
     senders: RwLock<HashMap<Uuid, Sender>>,
