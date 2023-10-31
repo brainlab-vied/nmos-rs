@@ -2,6 +2,7 @@ use std::collections::BTreeMap;
 
 use nmos_schema::is_04;
 use serde::Serialize;
+use uuid::Uuid;
 
 use crate::version::{is_04::V1_0, APIVersion};
 
@@ -15,6 +16,7 @@ pub struct NodeService {
 
 #[must_use]
 pub struct NodeBuilder {
+    id: Option<Uuid>,
     core: ResourceCoreBuilder,
     href: String,
     hostname: Option<String>,
@@ -24,11 +26,17 @@ pub struct NodeBuilder {
 impl NodeBuilder {
     pub fn new<S: Into<String>>(label: S, href: S) -> Self {
         NodeBuilder {
+            id: None,
             core: ResourceCoreBuilder::new(label),
             href: href.into(),
             hostname: None,
             services: Vec::new(),
         }
+    }
+
+    pub fn with_id(mut self, id: Uuid) -> Self {
+        self.id = Some(id);
+        self
     }
 
     pub fn with_service(mut self, service: NodeService) -> Self {
@@ -38,8 +46,14 @@ impl NodeBuilder {
 
     #[must_use]
     pub fn build(self) -> Node {
+        let mut core = self.core.build();
+
+        if let Some(id) = self.id{
+            core.id = id;
+        }
+
         Node {
-            core: self.core.build(),
+            core,
             href: self.href,
             hostname: self.hostname,
             services: self.services,
