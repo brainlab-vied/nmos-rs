@@ -11,12 +11,12 @@ pub use source::{Source, SourceBuilder, SourceJson};
 
 use crate::tai::TaiTime;
 
-mod device;
-mod flow;
-mod node;
-mod receiver;
-mod sender;
-mod source;
+pub mod device;
+pub mod flow;
+pub mod node;
+pub mod receiver;
+pub mod sender;
+pub mod source;
 
 #[derive(Debug, Clone, Copy)]
 pub enum Format {
