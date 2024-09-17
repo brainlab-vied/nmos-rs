@@ -31,6 +31,7 @@ pub enum Transport {
     RtpUnicast,
     RtpMulticast,
     Dash,
+    Http,
 }
 
 impl fmt::Display for Format {
@@ -50,6 +51,7 @@ impl fmt::Display for Transport {
             Transport::RtpUnicast => write!(f, "urn:x-nmos:transport:rtp.ucast"),
             Transport::RtpMulticast => write!(f, "urn:x-nmos:transport:rtp.mcast"),
             Transport::Dash => write!(f, "urn:x-nmos:transport:dash"),
+            Transport::Http => write!(f, "urn:x-nmos:transport:http"),
         }
     }
 }
