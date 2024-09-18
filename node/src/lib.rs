@@ -1,4 +1,4 @@
-use std::{collections::BinaryHeap, sync::Arc, thread, time::Duration};
+use std::{collections::BinaryHeap, net::SocketAddr, sync::Arc, thread, time::Duration};
 
 use axum::{http::Method, Server};
 pub use event_handler::EventHandler;
@@ -23,11 +23,11 @@ pub use error::Error as NmosError;
 use api::{NodeApi, RegistrationApi};
 use mdns::{NmosMdnsConfig, NmosMdnsEvent, NmosMdnsRegistry};
 
-#[derive(Default)]
 #[must_use]
 pub struct NodeBuilder {
     model: Model,
     event_handler: Option<Arc<dyn EventHandler>>,
+    address: SocketAddr,
 }
 
 impl NodeBuilder {
@@ -35,6 +35,7 @@ impl NodeBuilder {
         Self {
             model,
             event_handler: None,
+            address: ([0, 0, 0, 0], 3000).into(),
         }
     }
 
@@ -42,11 +43,17 @@ impl NodeBuilder {
         Self {
             model: Model::from_resources(resource_bundle),
             event_handler: None,
+            address: ([0, 0, 0, 0], 3000).into(),
         }
     }
 
     pub fn event_handler<H: EventHandler + 'static>(mut self, event_handler: H) -> Self {
         self.event_handler = Some(Arc::new(event_handler));
+        self
+    }
+
+    pub fn with_addr(mut self, address: SocketAddr) -> Self {
+        self.address = address;
         self
     }
 
@@ -65,6 +72,7 @@ impl NodeBuilder {
             model,
             service,
             registries,
+            address: self.address,
         }
     }
 }
@@ -74,6 +82,7 @@ pub struct Node {
     model: Arc<Mutex<Model>>,
     service: NodeApi,
     registries: Arc<Mutex<BinaryHeap<NmosMdnsRegistry>>>,
+    address: SocketAddr,
 }
 
 impl Node {
@@ -140,8 +149,7 @@ impl Node {
             )
             .service(self.service);
 
-        let addr = ([0, 0, 0, 0], 3000).into();
-        let http_server = Server::bind(&addr).serve(Shared::new(app));
+        let http_server = Server::bind(&self.address).serve(Shared::new(app));
 
         // Registry connection thread
         let registration = async {
