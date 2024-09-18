@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use nmos_model::{resource, Model};
+use tokio::sync::Mutex;
 use tracing::info;
 
 use crate::mdns::NmosMdnsRegistry;
@@ -146,9 +147,11 @@ impl RegistrationApi {
 
     pub async fn register_resources(
         client: &reqwest::Client,
-        model: Arc<Model>,
+        model: Arc<Mutex<Model>>,
         registry: &NmosMdnsRegistry,
     ) -> Result<(), Box<dyn std::error::Error>> {
+        let model = model.lock().await;
+
         let base = &registry.url.join("v1.0/").unwrap();
 
         info!("Attempting to register with {}", base);

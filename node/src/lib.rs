@@ -52,23 +52,28 @@ impl NodeBuilder {
 
     pub fn build(self) -> Node {
         // Wrap model in Arc
-        let model = Arc::new(self.model);
+        let model = Arc::new(Mutex::new(self.model));
 
         // Make service
         let service = NodeApi::new(model.clone());
+
+        // Make registries
+        let registries = Arc::new(Mutex::new(BinaryHeap::new()));
 
         Node {
             _event_handler: self.event_handler,
             model,
             service,
+            registries,
         }
     }
 }
 
 pub struct Node {
     _event_handler: Option<Arc<dyn EventHandler>>,
-    model: Arc<Model>,
+    model: Arc<Mutex<Model>>,
     service: NodeApi,
+    registries: Arc<Mutex<BinaryHeap<NmosMdnsRegistry>>>,
 }
 
 impl Node {
@@ -81,7 +86,7 @@ impl Node {
     }
 
     #[must_use]
-    pub fn model(&self) -> Arc<Model> {
+    pub fn model(&self) -> Arc<Mutex<Model>> {
         self.model.clone()
     }
 
@@ -92,7 +97,7 @@ impl Node {
         let (tx, mut rx) = mpsc::unbounded_channel();
 
         // Keep discovered registries in a priority queue
-        let registries = Arc::new(Mutex::new(BinaryHeap::new()));
+        //let registries = Arc::new(Mutex::new(BinaryHeap::new()));
 
         // MDNS must run on its own thread
         // Events are sent back to the Tokio runtime
@@ -115,7 +120,7 @@ impl Node {
 
         // Receive MDNS events in "main thread"
         let mdns_receiver = async {
-            let registries = registries.clone();
+            let registries = self.registries.clone();
 
             while let Some(event) = rx.recv().await {
                 if let NmosMdnsEvent::Discovery(_, Ok(discovery)) = event {
@@ -149,7 +154,7 @@ impl Node {
 
                 // Try and get highest priority registry
                 let registry = {
-                    let mut registries = registries.lock().await;
+                    let mut registries = self.registries.lock().await;
                     match registries.pop() {
                         Some(r) => r,
                         None => continue,
@@ -169,7 +174,8 @@ impl Node {
 
                 // Get heartbeat endpoint from node id
                 let heartbeat_url = {
-                    let nodes = self.model.nodes().await;
+                    let model = self.model.lock().await;
+                    let nodes = model.nodes().await;
                     let node_id = *nodes.iter().next().unwrap().0;
 
                     let base = &registry.url.join("v1.0/").unwrap();
