@@ -1,6 +1,8 @@
 use std::sync::Arc;
 
-use nmos_model::{resource, Model};
+use nmos_model::{resource, version::APIVersion, Model};
+use nmos_schema::is_04::{v1_0_x, v1_3_x};
+use serde_json::json;
 use tokio::sync::Mutex;
 use tracing::info;
 
@@ -8,29 +10,49 @@ use crate::mdns::NmosMdnsRegistry;
 
 pub struct RegistrationApi;
 
+macro_rules! api_post_request {
+    ($resource:expr, $r_type:expr,$json_enum:ident, $request:ident, $variant:ident) => {
+        match $resource {
+            resource::$json_enum::V1_0(json) => {
+                let request = v1_0_x::$request {
+                    data: Some(json),
+                    type_: Some(String::from($r_type.to_string())),
+                };
+                json!(v1_0_x::RegistrationapiResourcePostRequest::$variant(
+                    request
+                ))
+            }
+            resource::$json_enum::V1_3(json) => {
+                let request = v1_3_x::$request {
+                    data: Some(json),
+                    type_: Some(String::from($r_type.to_string())),
+                };
+                json!(v1_3_x::RegistrationapiResourcePostRequest::$variant(
+                    request
+                ))
+            }
+        }
+    };
+}
+
 impl RegistrationApi {
     async fn register_node(
         client: &reqwest::Client,
         url: &reqwest::Url,
         node: &resource::Node,
+        api_version: &APIVersion,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        use nmos_model::version::is_04::V1_0;
-        use nmos_schema::is_04::v1_0_x::{
-            RegistrationapiResourcePostRequest, RegistrationapiResourcePostRequestHealthVariant0,
-        };
-
-        // TODO: Must find better way of representing multiple API
-        // version in JSON. For now this will look like a mess.
-        let resource::NodeJson::V1_0(node_json) = node.to_json(&V1_0);
-
-        // Construct POST request
-        let node_post_request = RegistrationapiResourcePostRequestHealthVariant0 {
-            data: Some(node_json),
-            type_: Some(String::from("node")),
-        };
-        let post_request = RegistrationapiResourcePostRequest::Variant0(node_post_request);
-
-        client.post(url.clone()).json(&post_request).send().await?;
+        client
+            .post(url.clone())
+            .json(&api_post_request!(
+                node.to_json(&api_version),
+                "node",
+                NodeJson,
+                RegistrationapiResourcePostRequestHealthVariant0,
+                Variant0
+            ))
+            .send()
+            .await?;
 
         Ok(())
     }
@@ -39,20 +61,19 @@ impl RegistrationApi {
         client: &reqwest::Client,
         url: &reqwest::Url,
         device: &resource::Device,
+        api_version: &APIVersion,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        use nmos_model::version::is_04::V1_0;
-        use nmos_schema::is_04::v1_0_x::{
-            RegistrationapiResourcePostRequest, RegistrationapiResourcePostRequestHealthVariant1,
-        };
-
-        let resource::DeviceJson::V1_0(device_json) = device.to_json(&V1_0);
-        let device_post_request = RegistrationapiResourcePostRequestHealthVariant1 {
-            data: Some(device_json),
-            type_: Some(String::from("device")),
-        };
-        let post_request = RegistrationapiResourcePostRequest::Variant1(device_post_request);
-
-        client.post(url.clone()).json(&post_request).send().await?;
+        client
+            .post(url.clone())
+            .json(&api_post_request!(
+                device.to_json(&api_version),
+                "device",
+                DeviceJson,
+                RegistrationapiResourcePostRequestHealthVariant1,
+                Variant1
+            ))
+            .send()
+            .await?;
 
         Ok(())
     }
@@ -61,20 +82,19 @@ impl RegistrationApi {
         client: &reqwest::Client,
         url: &reqwest::Url,
         source: &resource::Source,
+        api_version: &APIVersion,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        use nmos_model::version::is_04::V1_0;
-        use nmos_schema::is_04::v1_0_x::{
-            RegistrationapiResourcePostRequest, RegistrationapiResourcePostRequestHealthVariant4,
-        };
-
-        let resource::SourceJson::V1_0(source_json) = source.to_json(&V1_0);
-        let source_post_request = RegistrationapiResourcePostRequestHealthVariant4 {
-            data: Some(source_json),
-            type_: Some(String::from("source")),
-        };
-        let post_request = RegistrationapiResourcePostRequest::Variant4(source_post_request);
-
-        client.post(url.clone()).json(&post_request).send().await?;
+        client
+            .post(url.clone())
+            .json(&api_post_request!(
+                source.to_json(&api_version),
+                "source",
+                SourceJson,
+                RegistrationapiResourcePostRequestHealthVariant4,
+                Variant4
+            ))
+            .send()
+            .await?;
 
         Ok(())
     }
@@ -83,20 +103,19 @@ impl RegistrationApi {
         client: &reqwest::Client,
         url: &reqwest::Url,
         flow: &resource::Flow,
+        api_version: &APIVersion,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        use nmos_model::version::is_04::V1_0;
-        use nmos_schema::is_04::v1_0_x::{
-            RegistrationapiResourcePostRequest, RegistrationapiResourcePostRequestHealthVariant5,
-        };
-
-        let resource::FlowJson::V1_0(flow_json) = flow.to_json(&V1_0);
-        let flow_post_request = RegistrationapiResourcePostRequestHealthVariant5 {
-            data: Some(flow_json),
-            type_: Some(String::from("flow")),
-        };
-        let post_request = RegistrationapiResourcePostRequest::Variant5(flow_post_request);
-
-        client.post(url.clone()).json(&post_request).send().await?;
+        client
+            .post(url.clone())
+            .json(&api_post_request!(
+                flow.to_json(&api_version),
+                "flow",
+                FlowJson,
+                RegistrationapiResourcePostRequestHealthVariant5,
+                Variant5
+            ))
+            .send()
+            .await?;
 
         Ok(())
     }
@@ -105,20 +124,19 @@ impl RegistrationApi {
         client: &reqwest::Client,
         url: &reqwest::Url,
         sender: &resource::Sender,
+        api_version: &APIVersion,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        use nmos_model::version::is_04::V1_0;
-        use nmos_schema::is_04::v1_0_x::{
-            RegistrationapiResourcePostRequest, RegistrationapiResourcePostRequestHealthVariant2,
-        };
-
-        let resource::SenderJson::V1_0(sender_json) = sender.to_json(&V1_0);
-        let sender_post_request = RegistrationapiResourcePostRequestHealthVariant2 {
-            data: Some(sender_json),
-            type_: Some(String::from("sender")),
-        };
-        let post_request = RegistrationapiResourcePostRequest::Variant2(sender_post_request);
-
-        client.post(url.clone()).json(&post_request).send().await?;
+        client
+            .post(url.clone())
+            .json(&api_post_request!(
+                sender.to_json(&api_version),
+                "sender",
+                SenderJson,
+                RegistrationapiResourcePostRequestHealthVariant2,
+                Variant2
+            ))
+            .send()
+            .await?;
 
         Ok(())
     }
@@ -127,20 +145,19 @@ impl RegistrationApi {
         client: &reqwest::Client,
         url: &reqwest::Url,
         receiver: &resource::Receiver,
+        api_version: &APIVersion,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        use nmos_model::version::is_04::V1_0;
-        use nmos_schema::is_04::v1_0_x::{
-            RegistrationapiResourcePostRequest, RegistrationapiResourcePostRequestHealthVariant3,
-        };
-
-        let resource::ReceiverJson::V1_0(receiver_json) = receiver.to_json(&V1_0);
-        let receiver_post_request = RegistrationapiResourcePostRequestHealthVariant3 {
-            data: Some(receiver_json),
-            type_: Some(String::from("receiver")),
-        };
-        let post_request = RegistrationapiResourcePostRequest::Variant3(receiver_post_request);
-
-        client.post(url.clone()).json(&post_request).send().await?;
+        client
+            .post(url.clone())
+            .json(&api_post_request!(
+                receiver.to_json(&api_version),
+                "receiver",
+                ReceiverJson,
+                RegistrationapiResourcePostRequestHealthVariant3,
+                Variant3
+            ))
+            .send()
+            .await?;
 
         Ok(())
     }
@@ -149,10 +166,14 @@ impl RegistrationApi {
         client: &reqwest::Client,
         model: Arc<Mutex<Model>>,
         registry: &NmosMdnsRegistry,
+        api_version: &APIVersion,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let model = model.lock().await;
 
-        let base = &registry.url.join("v1.0/").unwrap();
+        let base = &registry
+            .url
+            .join(format!("{}/", api_version.to_string()).as_str())
+            .unwrap();
 
         info!("Attempting to register with {}", base);
 
@@ -164,21 +185,21 @@ impl RegistrationApi {
         let node = nodes.iter().next().unwrap().1;
 
         // Register resources in order
-        Self::register_node(client, resource_url, node).await?;
+        Self::register_node(client, resource_url, node, api_version).await?;
         for (_, device) in model.devices().await.iter() {
-            Self::register_device(client, resource_url, device).await?;
+            Self::register_device(client, resource_url, device, api_version).await?;
         }
         for (_, source) in model.sources().await.iter() {
-            Self::register_source(client, resource_url, source).await?;
+            Self::register_source(client, resource_url, source, api_version).await?;
         }
         for (_, flow) in model.flows().await.iter() {
-            Self::register_flow(client, resource_url, flow).await?;
+            Self::register_flow(client, resource_url, flow, api_version).await?;
         }
         for (_, sender) in model.senders().await.iter() {
-            Self::register_sender(client, resource_url, sender).await?;
+            Self::register_sender(client, resource_url, sender, api_version).await?;
         }
         for (_, receiver) in model.receivers().await.iter() {
-            Self::register_receiver(client, resource_url, receiver).await?;
+            Self::register_receiver(client, resource_url, receiver, api_version).await?;
         }
 
         Ok(())

@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use nmos_schema::is_04;
 use serde::Serialize;
 
-use crate::version::{is_04::V1_0, APIVersion};
+use crate::version::{is_04::V1_0, is_04::V1_3, APIVersion};
 
 use super::{ResourceCore, ResourceCoreBuilder};
 
@@ -83,6 +83,35 @@ impl Node {
                     services,
                 })
             }
+            V1_3 => {
+                let services = self
+                    .services
+                    .iter()
+                    .map(|service| is_04::v1_3_x::NodeItemServices {
+                        authorization: None,
+                        href: service.href.clone(),
+                        type_: service.type_.clone(),
+                    })
+                    .collect();
+
+                NodeJson::V1_3(is_04::v1_3_x::Node {
+                    description: "".to_string(),
+                    id: self.core.id.to_string(),
+                    version: self.core.version.to_string(),
+                    label: self.core.label.clone(),
+                    href: self.href.clone(),
+                    hostname: self.hostname.clone(),
+                    caps: BTreeMap::default(),
+                    services,
+                    clocks: vec![],
+                    interfaces: vec![],
+                    api: nmos_schema::is_04::v1_3_x::NodeApi {
+                        versions: vec![V1_3.to_string()],
+                        endpoints: vec![],
+                    },
+                    tags: BTreeMap::new(),
+                })
+            }
             _ => panic!("Unsupported API"),
         }
     }
@@ -92,4 +121,5 @@ impl Node {
 #[serde(untagged)]
 pub enum NodeJson {
     V1_0(is_04::v1_0_x::Node),
+    V1_3(is_04::v1_3_x::Node),
 }

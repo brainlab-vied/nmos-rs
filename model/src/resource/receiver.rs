@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, vec};
 
 use nmos_schema::is_04;
 use serde::Serialize;
@@ -6,7 +6,7 @@ use uuid::Uuid;
 
 use crate::{
     resource::{Device, Format, Transport},
-    version::{is_04::V1_0, APIVersion},
+    version::{is_04::V1_0, is_04::V1_3, APIVersion},
 };
 
 use super::{ResourceCore, ResourceCoreBuilder};
@@ -112,6 +112,43 @@ impl Receiver {
                     subscription,
                 })
             }
+            V1_3 => {
+                let tags = self
+                    .core
+                    .tags
+                    .iter()
+                    .fold(BTreeMap::new(), |mut map, (key, array)| {
+                        let value = serde_json::Value::from(array.clone());
+                        map.insert(key.clone(), value);
+                        map
+                    });
+
+                let subscription = is_04::v1_3_x::ReceiverVideoSubscription {
+                    active: false,
+                    sender_id: self.subscription.map(|s| s.to_string()),
+                };
+
+                ReceiverJson::V1_3(is_04::v1_3_x::Receiver::Variant0(
+                    is_04::v1_3_x::ReceiverVideo {
+                        interface_bindings: vec![],
+                        id: self.core.id.to_string(),
+                        version: self.core.version.to_string(),
+                        label: self.core.label.clone(),
+                        description: self.core.description.clone(),
+                        format: self.format.to_string(),
+                        caps: is_04::v1_3_x::ReceiverVideoCaps {
+                            // TODO: implement caps
+                            media_types: None,
+                        },
+                        tags,
+                        device_id: self.device_id.to_string(),
+                        transport: nmos_schema::is_04::v1_3_x::ReceiverVideoTransport::Variant0(
+                            self.transport.to_string().into(),
+                        ),
+                        subscription,
+                    },
+                ))
+            }
             _ => panic!("Unsupported API"),
         }
     }
@@ -121,4 +158,5 @@ impl Receiver {
 #[serde(untagged)]
 pub enum ReceiverJson {
     V1_0(is_04::v1_0_x::Receiver),
+    V1_3(is_04::v1_3_x::Receiver),
 }

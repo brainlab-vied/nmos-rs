@@ -44,4 +44,5 @@ pub mod is_04 {
     use super::APIVersion;
 
     pub const V1_0: APIVersion = APIVersion { major: 1, minor: 0 };
+    pub const V1_3: APIVersion = APIVersion { major: 1, minor: 3 };
 }

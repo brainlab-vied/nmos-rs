@@ -12,6 +12,9 @@ use tower::{make::Shared, ServiceBuilder};
 use tower_http::cors::{self, CorsLayer};
 use tracing::{error, info};
 
+use nmos_model::version::is_04::V1_3;
+use nmos_model::version::APIVersion;
+
 mod api;
 mod error;
 mod event_handler;
@@ -28,6 +31,7 @@ pub struct NodeBuilder {
     model: Model,
     event_handler: Option<Arc<dyn EventHandler>>,
     address: SocketAddr,
+    api_version: APIVersion,
 }
 
 impl NodeBuilder {
@@ -36,6 +40,7 @@ impl NodeBuilder {
             model,
             event_handler: None,
             address: ([0, 0, 0, 0], 3000).into(),
+            api_version: V1_3,
         }
     }
 
@@ -44,6 +49,7 @@ impl NodeBuilder {
             model: Model::from_resources(resource_bundle),
             event_handler: None,
             address: ([0, 0, 0, 0], 3000).into(),
+            api_version: V1_3,
         }
     }
 
@@ -54,6 +60,11 @@ impl NodeBuilder {
 
     pub fn with_addr(mut self, address: SocketAddr) -> Self {
         self.address = address;
+        self
+    }
+
+    pub fn with_api_version(mut self, api_version: APIVersion) -> Self {
+        self.api_version = api_version;
         self
     }
 
@@ -73,6 +84,7 @@ impl NodeBuilder {
             service,
             registries,
             address: self.address,
+            api_version: self.api_version,
         }
     }
 }
@@ -83,6 +95,7 @@ pub struct Node {
     service: NodeApi,
     registries: Arc<Mutex<BinaryHeap<NmosMdnsRegistry>>>,
     address: SocketAddr,
+    api_version: APIVersion,
 }
 
 impl Node {
@@ -170,8 +183,13 @@ impl Node {
                 };
 
                 // Attempt to register
-                match RegistrationApi::register_resources(&client, self.model.clone(), &registry)
-                    .await
+                match RegistrationApi::register_resources(
+                    &client,
+                    self.model.clone(),
+                    &registry,
+                    &self.api_version,
+                )
+                .await
                 {
                     Ok(_) => info!("Registration successful"),
                     Err(err) => {

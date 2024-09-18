@@ -1,12 +1,12 @@
 use std::collections::BTreeMap;
 
-use nmos_schema::is_04;
+use nmos_schema::is_04::{v1_0_x, v1_3_x};
 use serde::Serialize;
 use uuid::Uuid;
 
 use crate::{
     resource::{Device, Format},
-    version::{is_04::V1_0, APIVersion},
+    version::{is_04::V1_0, is_04::V1_3, APIVersion},
 };
 
 use super::{ResourceCore, ResourceCoreBuilder};
@@ -74,7 +74,7 @@ impl Source {
 
                 let parents = self.parents.iter().map(ToString::to_string).collect();
 
-                SourceJson::V1_0(is_04::v1_0_x::Source {
+                SourceJson::V1_0(v1_0_x::Source {
                     id: self.core.id.to_string(),
                     version: self.core.version.to_string(),
                     label: self.core.label.clone(),
@@ -86,6 +86,33 @@ impl Source {
                     parents,
                 })
             }
+            V1_3 => {
+                let tags = self
+                    .core
+                    .tags
+                    .iter()
+                    .fold(BTreeMap::new(), |mut map, (key, array)| {
+                        let value = serde_json::Value::from(array.clone());
+                        map.insert(key.clone(), value);
+                        map
+                    });
+
+                let parents = self.parents.iter().map(ToString::to_string).collect();
+
+                SourceJson::V1_3(v1_3_x::SourceVersion::Variant0(v1_3_x::SourceGeneric {
+                    clock_name: None,
+                    grain_rate: None,
+                    id: self.core.id.to_string(),
+                    version: self.core.version.to_string(),
+                    label: self.core.label.clone(),
+                    description: self.core.description.clone(),
+                    format: self.format.to_string(),
+                    caps: BTreeMap::default(),
+                    tags,
+                    device_id: self.device_id.to_string(),
+                    parents,
+                }))
+            }
             _ => panic!("Unsupported API"),
         }
     }
@@ -94,5 +121,6 @@ impl Source {
 #[derive(Debug, Serialize)]
 #[serde(untagged)]
 pub enum SourceJson {
-    V1_0(is_04::v1_0_x::Source),
+    V1_0(v1_0_x::Source),
+    V1_3(v1_3_x::SourceVersion),
 }

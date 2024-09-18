@@ -39,7 +39,10 @@ impl NodeApi {
                 get(|| async { Json(json!(["x-manifest/", "x-nmos/"])) }),
             )
             .route("/x-nmos/", get(|| async { Json(json!(["node/"])) }))
-            .route("/x-nmos/node/", get(|| async { Json(json!(["v1.0/"])) }))
+            .route(
+                "/x-nmos/node/",
+                get(|| async { Json(json!(["v1.0/", "v1.3/"])) }),
+            )
             .route(
                 "/x-nmos/node/v1.0/",
                 get(|| async {

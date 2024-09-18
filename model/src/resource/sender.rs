@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, vec};
 
 use nmos_schema::is_04;
 use serde::Serialize;
@@ -6,7 +6,10 @@ use uuid::Uuid;
 
 use crate::{
     resource::{Device, Flow, Transport},
-    version::{is_04::V1_0, APIVersion},
+    version::{
+        is_04::{V1_0, V1_3},
+        APIVersion,
+    },
 };
 
 use super::{ResourceCore, ResourceCoreBuilder};
@@ -117,6 +120,42 @@ impl Sender {
                     manifest_href: self.manifest_href.clone(),
                 })
             }
+            V1_3 => {
+                let tags =
+                    if self.core.tags.is_empty() {
+                        None
+                    } else {
+                        Some(self.core.tags.iter().fold(
+                            BTreeMap::new(),
+                            |mut map, (key, array)| {
+                                let value = serde_json::Value::from(array.clone());
+                                map.insert(key.clone(), value);
+                                map
+                            },
+                        ))
+                    };
+
+                SenderJson::V1_3(is_04::v1_3_x::Sender {
+                    interface_bindings: vec![],
+                    // TODO: implement caps
+                    caps: None,
+                    id: self.core.id.to_string(),
+                    version: self.core.version.to_string(),
+                    label: self.core.label.clone(),
+                    description: self.core.description.clone(),
+                    flow_id: Some(self.flow_id.to_string()),
+                    tags: tags.unwrap(),
+                    device_id: self.device_id.to_string(),
+                    manifest_href: Some(self.manifest_href.clone()),
+                    subscription: nmos_schema::is_04::v1_3_x::SenderSubscription {
+                        active: false,
+                        receiver_id: None,
+                    },
+                    transport: nmos_schema::is_04::v1_3_x::SenderTransport::Variant0(
+                        self.transport.to_string().into(),
+                    ),
+                })
+            }
             _ => panic!("Unsupported API"),
         }
     }
@@ -126,4 +165,5 @@ impl Sender {
 #[serde(untagged)]
 pub enum SenderJson {
     V1_0(is_04::v1_0_x::Sender),
+    V1_3(is_04::v1_3_x::Sender),
 }

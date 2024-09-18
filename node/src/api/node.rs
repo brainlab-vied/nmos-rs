@@ -5,7 +5,7 @@ use axum::extract::Path;
 use axum::http::StatusCode;
 use axum::{Extension, Json};
 use nmos_model::resource::{DeviceJson, FlowJson, NodeJson, ReceiverJson, SenderJson, SourceJson};
-use nmos_model::version::is_04::V1_0;
+use nmos_model::version::is_04::{V1_0, V1_3};
 use nmos_model::version::APIVersion;
 use nmos_model::Model;
 use tokio::sync::Mutex;
@@ -13,7 +13,7 @@ use uuid::Uuid;
 
 use super::ServiceError;
 
-const SUPPORTED_API_VERSIONS: &[APIVersion] = &[V1_0];
+const SUPPORTED_API_VERSIONS: &[APIVersion] = &[V1_0, V1_3];
 
 fn parse_api_version(api: &str) -> Result<APIVersion, ServiceError> {
     let api = match APIVersion::from_str(api) {

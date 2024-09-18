@@ -1,4 +1,4 @@
-use std::fmt;
+use std::{collections::BTreeMap, fmt};
 
 use nmos_schema::is_04;
 use serde::Serialize;
@@ -6,7 +6,7 @@ use uuid::Uuid;
 
 use crate::{
     resource::Node,
-    version::{is_04::V1_0, APIVersion},
+    version::{is_04::V1_0, is_04::V1_3, APIVersion},
 };
 
 use super::{ResourceCore, ResourceCoreBuilder};
@@ -92,6 +92,26 @@ impl Device {
                     receivers,
                 })
             }
+            V1_3 => {
+                // Senders
+                let senders = self.senders.iter().map(ToString::to_string).collect();
+
+                // Receivers
+                let receivers = self.receivers.iter().map(ToString::to_string).collect();
+
+                DeviceJson::V1_3(is_04::v1_3_x::Device {
+                    id: self.core.id.to_string(),
+                    version: self.core.version.to_string(),
+                    label: self.core.label.clone(),
+                    type_: is_04::v1_3_x::DeviceType::Variant0(self.type_.to_string().into()),
+                    node_id: self.node_id.to_string(),
+                    senders,
+                    receivers,
+                    tags: BTreeMap::new(),
+                    description: "".to_string(),
+                    controls: vec![],
+                })
+            }
             _ => panic!("Unsupported API"),
         }
     }
@@ -101,4 +121,5 @@ impl Device {
 #[serde(untagged)]
 pub enum DeviceJson {
     V1_0(is_04::v1_0_x::Device),
+    V1_3(is_04::v1_3_x::Device),
 }

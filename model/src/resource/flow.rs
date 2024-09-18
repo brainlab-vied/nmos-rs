@@ -2,11 +2,12 @@ use std::collections::BTreeMap;
 
 use nmos_schema::is_04;
 use serde::Serialize;
+use serde_json::json;
 use uuid::Uuid;
 
 use crate::{
     resource::{Format, Source},
-    version::{is_04::V1_0, APIVersion},
+    version::{is_04::V1_0, is_04::V1_3, APIVersion},
 };
 
 use super::{ResourceCore, ResourceCoreBuilder};
@@ -95,6 +96,39 @@ impl Flow {
                     parents,
                 })
             }
+            V1_3 => {
+                // Tags
+                let tags = self
+                    .core
+                    .tags
+                    .iter()
+                    .fold(BTreeMap::new(), |mut map, (key, array)| {
+                        let value = serde_json::Value::from(array.clone());
+                        map.insert(key.clone(), value);
+                        map
+                    });
+
+                let parents = self.parents.iter().map(ToString::to_string).collect();
+
+                FlowJson::V1_3(json!(is_04::v1_3_x::FlowVideo {
+                    id: self.core.id.to_string(),
+                    version: self.core.version.to_string(),
+                    label: self.core.label.clone(),
+                    description: self.core.description.clone(),
+                    format: self.format.to_string(),
+                    tags,
+                    source_id: self.source_id.to_string(),
+                    parents,
+                    // TODO: implement device_id in flows
+                    device_id: "".to_string(),
+                    colorspace: "BGRA".into(),
+                    frame_height: 640,
+                    frame_width: 480,
+                    grain_rate: None,
+                    interlace_mode: None,
+                    transfer_characteristic: None,
+                }))
+            }
             _ => panic!("Unsupported API"),
         }
     }
@@ -104,4 +138,5 @@ impl Flow {
 #[serde(untagged)]
 pub enum FlowJson {
     V1_0(is_04::v1_0_x::Flow),
+    V1_3(is_04::v1_3_x::Flow),
 }
