@@ -109,7 +109,7 @@ impl Node {
                         versions: vec![V1_3.to_string()],
                         endpoints: vec![],
                     },
-                    tags: BTreeMap::new(),
+                    tags: self.core.tags_json(),
                 })
             }
             _ => panic!("Unsupported API"),

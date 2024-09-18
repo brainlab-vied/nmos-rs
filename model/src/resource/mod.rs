@@ -101,7 +101,7 @@ impl ResourceCoreBuilder {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ResourceCore {
     pub id: Uuid,
     pub version: TaiTime,
@@ -113,6 +113,16 @@ pub struct ResourceCore {
 impl ResourceCore {
     pub fn builder<S: Into<String>>(label: S) -> ResourceCoreBuilder {
         ResourceCoreBuilder::new(label)
+    }
+
+    pub fn tags_json(&self) -> BTreeMap<String, serde_json::Value> {
+        self.tags
+            .iter()
+            .fold(BTreeMap::new(), |mut map, (key, array)| {
+                let value = serde_json::Value::from(array.clone());
+                map.insert(key.clone(), value);
+                map
+            })
     }
 }
 

@@ -1,4 +1,4 @@
-use std::{collections::BTreeMap, fmt};
+use std::fmt;
 
 use nmos_schema::is_04;
 use serde::Serialize;
@@ -107,7 +107,7 @@ impl Device {
                     node_id: self.node_id.to_string(),
                     senders,
                     receivers,
-                    tags: BTreeMap::new(),
+                    tags: self.core.tags_json(),
                     description: "".to_string(),
                     controls: vec![],
                 })

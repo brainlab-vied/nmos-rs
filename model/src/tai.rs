@@ -3,6 +3,7 @@ use std::{
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
+#[derive(Clone)]
 pub struct TaiTime {
     secs: u64,
     nanos: u32,
