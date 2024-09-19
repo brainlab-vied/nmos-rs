@@ -204,7 +204,10 @@ impl Node {
                     let nodes = model.nodes().await;
                     let node_id = *nodes.iter().next().unwrap().0;
 
-                    let base = &registry.url.join("v1.0/").unwrap();
+                    let base = &registry
+                        .url
+                        .join(self.api_version.to_string().as_str())
+                        .unwrap();
                     base.join(&format!("health/nodes/{}", node_id)).unwrap()
                 };
 
