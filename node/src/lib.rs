@@ -175,7 +175,13 @@ impl Node {
                 let registry = {
                     let mut registries = self.registries.lock().await;
                     match registries.pop() {
-                        Some(r) => r,
+                        Some(r) => {
+                            if r.api_ver.contains(&self.api_version) {
+                                r
+                            } else {
+                                continue;
+                            }
+                        }
                         None => continue,
                     }
                 };
