@@ -121,20 +121,6 @@ impl Sender {
                 })
             }
             V1_3 => {
-                let tags =
-                    if self.core.tags.is_empty() {
-                        None
-                    } else {
-                        Some(self.core.tags.iter().fold(
-                            BTreeMap::new(),
-                            |mut map, (key, array)| {
-                                let value = serde_json::Value::from(array.clone());
-                                map.insert(key.clone(), value);
-                                map
-                            },
-                        ))
-                    };
-
                 SenderJson::V1_3(is_04::v1_3_x::Sender {
                     interface_bindings: vec![],
                     // TODO: implement caps
@@ -144,7 +130,7 @@ impl Sender {
                     label: self.core.label.clone(),
                     description: self.core.description.clone(),
                     flow_id: Some(self.flow_id.to_string()),
-                    tags: tags.unwrap(),
+                    tags: self.core.tags_json(),
                     device_id: self.device_id.to_string(),
                     manifest_href: Some(self.manifest_href.clone()),
                     subscription: nmos_schema::is_04::v1_3_x::SenderSubscription {
