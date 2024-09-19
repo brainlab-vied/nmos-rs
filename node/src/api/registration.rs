@@ -52,7 +52,8 @@ impl RegistrationApi {
                 Variant0
             ))
             .send()
-            .await?;
+            .await?
+            .error_for_status()?;
 
         Ok(())
     }
@@ -73,7 +74,8 @@ impl RegistrationApi {
                 Variant1
             ))
             .send()
-            .await?;
+            .await?
+            .error_for_status()?;
 
         Ok(())
     }
@@ -94,7 +96,8 @@ impl RegistrationApi {
                 Variant4
             ))
             .send()
-            .await?;
+            .await?
+            .error_for_status()?;
 
         Ok(())
     }
@@ -115,7 +118,8 @@ impl RegistrationApi {
                 Variant5
             ))
             .send()
-            .await?;
+            .await?
+            .error_for_status()?;
 
         Ok(())
     }
@@ -136,7 +140,8 @@ impl RegistrationApi {
                 Variant2
             ))
             .send()
-            .await?;
+            .await?
+            .error_for_status()?;
 
         Ok(())
     }
@@ -157,7 +162,8 @@ impl RegistrationApi {
                 Variant3
             ))
             .send()
-            .await?;
+            .await?
+            .error_for_status()?;
 
         Ok(())
     }
