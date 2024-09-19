@@ -44,7 +44,7 @@ impl NodeApi {
                 get(|| async { Json(json!(["v1.0/", "v1.3/"])) }),
             )
             .route(
-                "/x-nmos/node/v1.0/",
+                "/x-nmos/node/:api/",
                 get(|| async {
                     Json(json!([
                         "devices/",
