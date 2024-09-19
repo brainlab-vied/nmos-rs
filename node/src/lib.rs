@@ -118,9 +118,6 @@ impl Node {
         // Channel for receiving MDNS events
         let (tx, mut rx) = mpsc::unbounded_channel();
 
-        // Keep discovered registries in a priority queue
-        //let registries = Arc::new(Mutex::new(BinaryHeap::new()));
-
         // MDNS must run on its own thread
         // Events are sent back to the Tokio runtime
         thread::spawn(move || {
@@ -147,6 +144,7 @@ impl Node {
             while let Some(event) = rx.recv().await {
                 if let NmosMdnsEvent::Discovery(_, Ok(discovery)) = event {
                     if let Some(registry) = NmosMdnsRegistry::parse(&discovery) {
+                        info!("Discovered registry {}", registry.url);
                         registries.lock().await.push(registry);
                     }
                 }
@@ -203,20 +201,21 @@ impl Node {
                     let model = self.model.lock().await;
                     let nodes = model.nodes().await;
                     let node_id = *nodes.iter().next().unwrap().0;
-
                     let base = &registry
                         .url
                         .join(self.api_version.to_string().as_str())
                         .unwrap();
+
                     base.join(&format!("health/nodes/{}", node_id)).unwrap()
                 };
 
                 // Send heartbeat every 5 seconds
                 loop {
+                    println!("Heart-beating to {}", heartbeat_url);
                     match client.post(heartbeat_url.clone()).send().await {
                         Ok(res) => {
                             if !res.status().is_success() {
-                                error!("Heartbeat error");
+                                error!("Heartbeat error {:?}", res);
                                 break;
                             }
                         }
