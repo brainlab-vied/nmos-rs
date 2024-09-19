@@ -95,21 +95,26 @@ impl Node {
                     .collect();
 
                 NodeJson::V1_3(is_04::v1_3_x::Node {
-                    description: "".to_string(),
+                    description: self.core.description.to_string(),
                     id: self.core.id.to_string(),
                     version: self.core.version.to_string(),
                     label: self.core.label.clone(),
                     href: self.href.clone(),
                     hostname: self.hostname.clone(),
                     caps: BTreeMap::default(),
-                    services,
-                    clocks: vec![],
+                    clocks: vec![serde_json::json!({"name": "clk0", "ref_type": "internal"})],
                     interfaces: vec![],
                     api: nmos_schema::is_04::v1_3_x::NodeApi {
                         versions: vec![V1_3.to_string()],
-                        endpoints: vec![],
+                        endpoints: vec![is_04::v1_3_x::NodeApiItemEndpoints {
+                            host: serde_json::json!("localhost".to_string()),
+                            port: 8088,
+                            protocol: "http".into(),
+                            authorization: Some(false),
+                        }],
                     },
                     tags: self.core.tags_json(),
+                    services,
                 })
             }
             _ => panic!("Unsupported API"),

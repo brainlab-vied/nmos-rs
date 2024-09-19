@@ -1,0 +1,118 @@
+#!/usr/bin/env python3
+
+import argparse
+import json
+import os
+import jsonschema
+from jsonschema import Draft7Validator, RefResolver
+
+
+def load_schema(file_path):
+    """Load a JSON schema file."""
+    with open(file_path) as f:
+        return json.load(f)
+
+
+def load_all_schemas(schema_path):
+    """Load the main schema and all other schemas in the same directory."""
+    schema_dir = os.path.dirname(os.path.abspath(schema_path))
+    schemas = {}
+
+    # Load the main schema
+    schemas['main'] = load_schema(schema_path)
+
+    # Load all other JSON schema files in the same directory
+    for file_name in os.listdir(schema_dir):
+        if file_name.endswith('.json') and file_name != os.path.basename(schema_path):
+            schemas[file_name] = load_schema(
+                os.path.join(schema_dir, file_name))
+
+    return schemas, schema_dir
+
+
+def validate_json(json_data, schema, schema_dir):
+    """Validate JSON data against the schema, resolving references."""
+    base_uri = f"file://{os.path.abspath(schema_dir)}/"
+    resolver = RefResolver(base_uri=base_uri, referrer=schema)
+    validator = Draft7Validator(schema, resolver=resolver)
+
+    errors = list(validator.iter_errors(json_data))
+
+    if not errors:
+        print("JSON is valid!")
+        return
+
+    for error in errors:
+        # Print error details
+        path_str = '/'.join(map(str, error.path))
+        print(f"Error at: {path_str}")
+        print(f"  Error message: {error.message}")
+        print(f"  Schema path: {'/'.join(map(str, error.schema_path))}")
+
+        # Print context for better understanding
+        context = get_error_context(json_data, error.path)
+        print(f"  Context: {json.dumps(context, indent=2)}")
+
+
+def get_error_context(data, path):
+    """Retrieve context from JSON data based on error path."""
+    for key in path:
+        if isinstance(data, list):
+            try:
+                data = data[key]
+            except IndexError:
+                return f"Index {key} out of range in list"
+        elif isinstance(data, dict):
+            data = data.get(key, {})
+        else:
+            return "Invalid path"
+    return data
+
+
+def read_json_from_file(file_path):
+    """Read JSON data from a file."""
+    with open(file_path) as f:
+        return json.load(f)
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Validate a JSON string against a JSON Schema.",
+        usage="%(prog)s --schema <schema_file_path> --json <json_string_or_file>"
+    )
+    parser.add_argument('--schema', required=True,
+                        help="Path to the main JSON schema file.")
+    parser.add_argument('--json', required=True,
+                        help="The JSON string or file path to validate.")
+
+    args = parser.parse_args()
+
+    if not args.schema or not args.json:
+        parser.print_help()
+        exit(1)
+
+    try:
+        schemas, schema_dir = load_all_schemas(args.schema)
+        schema = schemas['main']
+    except FileNotFoundError:
+        print(f"Error: Schema file '{args.schema}' not found.")
+        exit(1)
+    except json.JSONDecodeError:
+        print(
+            f"Error: Failed to parse schema file '{args.schema}'. Ensure it is valid JSON.")
+        exit(1)
+
+    try:
+        if os.path.isfile(args.json):
+            json_data = read_json_from_file(args.json)
+        else:
+            json_data = json.loads(args.json)
+    except json.JSONDecodeError:
+        print("Error: Failed to parse JSON data. Ensure the JSON string or file contents are valid.")
+        exit(1)
+
+    validate_json(json_data, schema, schema_dir)
+
+
+if __name__ == '__main__':
+    main()

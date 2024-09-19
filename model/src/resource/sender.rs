@@ -122,7 +122,7 @@ impl Sender {
             }
             V1_3 => {
                 SenderJson::V1_3(is_04::v1_3_x::Sender {
-                    interface_bindings: vec![],
+                    interface_bindings: vec!["default".into()],
                     // TODO: implement caps
                     caps: None,
                     id: self.core.id.to_string(),
@@ -132,7 +132,7 @@ impl Sender {
                     flow_id: Some(self.flow_id.to_string()),
                     tags: self.core.tags_json(),
                     device_id: self.device_id.to_string(),
-                    manifest_href: Some(self.manifest_href.clone()),
+                    manifest_href: None,
                     subscription: nmos_schema::is_04::v1_3_x::SenderSubscription {
                         active: false,
                         receiver_id: None,

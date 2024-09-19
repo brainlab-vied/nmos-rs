@@ -128,7 +128,16 @@ impl Into<v1_3_x::Source> for Source {
                 caps,
                 parents,
                 device_id,
-                channels: vec![],
+                channels: vec![
+                    v1_3_x::SourceAudioItemChannels {
+                        label: "L".into(),
+                        symbol: None,
+                    },
+                    v1_3_x::SourceAudioItemChannels {
+                        label: "R".into(),
+                        symbol: None,
+                    },
+                ],
                 grain_rate: None,
             }),
         }

@@ -8,22 +8,24 @@ use crate::{
     version::{is_04::V1_0, is_04::V1_3, APIVersion},
 };
 
-use super::{ResourceCore, ResourceCoreBuilder};
+use super::{Device, ResourceCore, ResourceCoreBuilder};
 
 #[must_use]
 pub struct FlowBuilder {
     core: ResourceCoreBuilder,
     format: Format,
     source_id: Uuid,
+    device_id: Uuid,
     parents: Vec<Uuid>,
 }
 
 impl FlowBuilder {
-    pub fn new<S: Into<String>>(label: S, source: &Source) -> Self {
+    pub fn new<S: Into<String>>(label: S, source: &Source, device: &Device) -> Self {
         FlowBuilder {
             core: ResourceCoreBuilder::new(label),
             format: source.format,
             source_id: source.core.id,
+            device_id: device.core.id,
             parents: Vec::new(),
         }
     }
@@ -48,6 +50,7 @@ impl FlowBuilder {
             core: self.core.build(),
             format: self.format,
             source_id: self.source_id,
+            device_id: self.device_id,
             parents: self.parents,
         }
     }
@@ -58,12 +61,13 @@ pub struct Flow {
     pub core: ResourceCore,
     pub format: Format,
     pub source_id: Uuid,
+    pub device_id: Uuid,
     pub parents: Vec<Uuid>,
 }
 
 impl Flow {
-    pub fn builder<S: Into<String>>(label: S, source: &Source) -> FlowBuilder {
-        FlowBuilder::new(label, source)
+    pub fn builder<S: Into<String>>(label: S, source: &Source, device: &Device) -> FlowBuilder {
+        FlowBuilder::new(label, source, device)
     }
 
     #[must_use]
@@ -106,11 +110,10 @@ impl Into<is_04::v1_3_x::Flow> for Flow {
         let format = self.format.to_string();
         let tags = self.core.tags_json();
         let source_id = self.source_id.to_string();
-        // TODO: implement device_id in flows
-        let device_id = "".to_string();
+        let device_id = self.device_id.to_string();
         match self.format {
             Format::Video => {
-                json!(is_04::v1_3_x::FlowVideo {
+                json!(is_04::v1_3_x::FlowVideoCoded {
                     id,
                     version,
                     label,
@@ -126,14 +129,15 @@ impl Into<is_04::v1_3_x::Flow> for Flow {
                     frame_width: 480,
                     interlace_mode: None,
                     transfer_characteristic: None,
+                    media_type: "video/h264".into()
                 })
             }
             Format::Audio => {
-                let sample_rate = nmos_schema::is_04::v1_3_x::FlowAudioSampleRate {
+                let sample_rate = nmos_schema::is_04::v1_3_x::FlowAudioCodedSampleRate {
                     numerator: 44000,
                     denominator: None,
                 };
-                json!(is_04::v1_3_x::FlowAudio {
+                json!(is_04::v1_3_x::FlowAudioCoded {
                     id,
                     version,
                     label,
@@ -144,6 +148,7 @@ impl Into<is_04::v1_3_x::Flow> for Flow {
                     parents,
                     device_id,
                     sample_rate,
+                    media_type: "audio/ogg".to_string(),
                     grain_rate: None,
                 })
             }
