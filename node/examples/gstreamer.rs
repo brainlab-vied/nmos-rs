@@ -58,7 +58,7 @@ fn create_node() -> Node {
         resource::Source::builder("GStreamer test source", &device, resource::Format::Video)
             .description("SMPTE video test stream")
             .build();
-    let flow = resource::Flow::builder("GStreamer VP8 test flow", &source).build();
+    let flow = resource::Flow::builder("GStreamer VP8 test flow", &source, &device).build();
 
     // Create sender
     let sender = resource::Sender::builder(
