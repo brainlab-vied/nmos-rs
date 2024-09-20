@@ -144,7 +144,10 @@ impl Node {
             while let Some(event) = rx.recv().await {
                 if let NmosMdnsEvent::Discovery(_, Ok(discovery)) = event {
                     if let Some(registry) = NmosMdnsRegistry::parse(&discovery) {
-                        info!("Discovered registry {}", registry.url);
+                        info!(
+                            "Discovered registry url: {} version: {:?}",
+                            registry.url, registry.api_ver
+                        );
                         registries.lock().await.push(registry);
                     }
                 }
@@ -186,6 +189,8 @@ impl Node {
                     }
                 };
 
+                info!("selecting registry {}", registry.url);
+
                 // Attempt to register
                 match RegistrationApi::register_resources(
                     &client,
@@ -217,13 +222,14 @@ impl Node {
 
                 // Send heartbeat every 5 seconds
                 loop {
-                    println!("Heart-beating to {}", heartbeat_url);
+                    info!("Heart-beating to {}", heartbeat_url);
                     match client.post(heartbeat_url.clone()).send().await {
                         Ok(res) => {
                             if !res.status().is_success() {
-                                error!("Heartbeat error {:?}", res);
+                                error!("Heartbeat error {}", res.status());
                                 break;
                             }
+                            info!("Heartbeat successful!");
                         }
                         Err(err) => {
                             error!("Failed to send heartbeat: {}", err);

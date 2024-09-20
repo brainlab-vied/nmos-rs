@@ -10,7 +10,7 @@ use std::{
 use nmos_model::version::APIVersion;
 use reqwest::Url;
 use tokio::sync::mpsc::{self, UnboundedSender};
-use tracing::{error, info};
+use tracing::{debug, error, info};
 use zeroconf::{
     browser::TMdnsBrowser, event_loop::TEventLoop, service::TMdnsService, txt_record::TTxtRecord,
     EventLoop, MdnsBrowser, MdnsService, ServiceDiscovery, ServiceRegistration, ServiceType,
@@ -140,7 +140,7 @@ impl MdnsContext {
         context: &Option<Arc<dyn Any>>,
     ) {
         match &result {
-            Ok(d) => info!("Discovered service: {:?}", d),
+            Ok(d) => debug!("Discovered service: {:?}", d),
             Err(e) => error!("Service discovery error: {}", e),
         };
 

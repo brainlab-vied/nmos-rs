@@ -4,7 +4,7 @@ use nmos_model::{resource, version::APIVersion, Model};
 use nmos_schema::is_04::{v1_0_x, v1_3_x};
 use serde_json::json;
 use tokio::sync::Mutex;
-use tracing::info;
+use tracing::{debug, info};
 
 use crate::mdns::NmosMdnsRegistry;
 
@@ -181,8 +181,6 @@ impl RegistrationApi {
             .join(format!("{}/", api_version.to_string()).as_str())
             .unwrap();
 
-        info!("All received registries: {:?}", registry);
-
         info!("Attempting to register with {}", base);
 
         // Resource endpoint
@@ -193,25 +191,25 @@ impl RegistrationApi {
         let node = nodes.iter().next().unwrap().1;
 
         // Register resources in order
-        info!("Registering node...");
+        debug!("Registering node...");
         Self::register_node(client, resource_url, node, api_version).await?;
-        info!("Registering devices...");
+        debug!("Registering devices...");
         for (_, device) in model.devices().await.iter() {
             Self::register_device(client, resource_url, device, api_version).await?;
         }
-        info!("Registering sources...");
+        debug!("Registering sources...");
         for (_, source) in model.sources().await.iter() {
             Self::register_source(client, resource_url, source, api_version).await?;
         }
-        info!("Registering flows...");
+        debug!("Registering flows...");
         for (_, flow) in model.flows().await.iter() {
             Self::register_flow(client, resource_url, flow, api_version).await?;
         }
-        info!("Registering senders...");
+        debug!("Registering senders...");
         for (_, sender) in model.senders().await.iter() {
             Self::register_sender(client, resource_url, sender, api_version).await?;
         }
-        info!("Registering receivers...");
+        debug!("Registering receivers...");
         for (_, receiver) in model.receivers().await.iter() {
             Self::register_receiver(client, resource_url, receiver, api_version).await?;
         }
