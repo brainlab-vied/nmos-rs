@@ -118,7 +118,7 @@ impl Sender {
             }),
             V1_3 => {
                 SenderJson::V1_3(v1_3_x::Sender {
-                    interface_bindings: vec!["default".into()],
+                    interface_bindings: vec![],
                     // TODO: implement caps
                     caps: None,
                     id: self.core.id.to_string(),
