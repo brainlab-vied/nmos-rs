@@ -11,7 +11,7 @@ use tokio::{
 };
 use tower::{make::Shared, ServiceBuilder};
 use tower_http::cors::{self, CorsLayer};
-use tracing::{error, info};
+use tracing::{debug, error, info};
 
 use nmos_model::version::is_04::V1_3;
 use nmos_model::version::APIVersion;
@@ -146,22 +146,21 @@ impl Node {
                 if let NmosMdnsEvent::Discovery(_, Ok(discovery)) = event {
                     if let Some(registry) = NmosMdnsRegistry::parse(&discovery) {
                         let mut registries = registries.lock().await;
-                        if registries.iter().find(|&reg| reg == &registry).is_none() {
-                            info!(
-                                "Discovered registry url: {} version: {:?} priority: {}",
-                                registry.url,
-                                registry
-                                    .api_ver
-                                    .iter()
-                                    .map(APIVersion::to_string)
-                                    .collect::<Vec<_>>(),
-                                registry.pri
-                            );
-                            registries.push(registry);
-                        }
+                        debug!(
+                            "Discovered registry url: {} version: {:?} priority: {}",
+                            registry.url,
+                            registry
+                                .api_ver
+                                .iter()
+                                .map(APIVersion::to_string)
+                                .collect::<Vec<_>>(),
+                            registry.pri
+                        );
+                        registries.push(registry);
                     }
                 }
             }
+            error!("mDNS discovery unexpectedly finished when it should not.");
         };
 
         // Create HTTP service
@@ -178,7 +177,10 @@ impl Node {
         // Registry connection thread
         let registration = async {
             // Create http client
-            let client = reqwest::Client::new();
+            let client = reqwest::Client::builder()
+                .timeout(Duration::from_secs(5))
+                .build()
+                .unwrap();
 
             loop {
                 // Wait for registry discovery
@@ -232,14 +234,14 @@ impl Node {
                     base
                 };
 
-                let mut attempts = 0;
+                let mut first_attempt = true;
                 // Send heartbeat every 5 seconds
                 loop {
-                    info!("Heart-beating to {}", heartbeat_url);
+                    debug!("Heart-beating to {}", heartbeat_url);
                     match client.post(heartbeat_url.clone()).send().await {
                         Ok(res) => {
                             if !res.status().is_success() {
-                                if res.status() == StatusCode::NOT_FOUND && attempts < 1 {
+                                if res.status() == StatusCode::NOT_FOUND && first_attempt {
                                     match RegistrationApi::register_resources(
                                         &client,
                                         self.model.clone(),
@@ -249,7 +251,7 @@ impl Node {
                                     .await
                                     {
                                         Ok(_) => {
-                                            attempts += 1;
+                                            first_attempt = false;
                                             continue;
                                         }
                                         Err(_) => break,
@@ -275,6 +277,8 @@ impl Node {
             _ = http_server => {}
             _ = registration => {}
         };
+
+        error!("Program shouldn't reach this part!");
 
         Ok(())
     }
