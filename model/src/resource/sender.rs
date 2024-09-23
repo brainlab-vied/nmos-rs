@@ -1,7 +1,8 @@
-use std::{collections::BTreeMap, vec};
+use std::vec;
 
-use nmos_schema::is_04;
+use nmos_schema::is_04::{v1_0_x, v1_3_x};
 use serde::Serialize;
+use serde_json::json;
 use uuid::Uuid;
 
 use crate::{
@@ -13,6 +14,17 @@ use crate::{
 };
 
 use super::{ResourceCore, ResourceCoreBuilder};
+
+macro_rules! registration_request {
+    ($value:expr, $version:ident) => {
+        json!($version::RegistrationapiResourcePostRequest::Variant2(
+            $version::RegistrationapiResourcePostRequestHealthVariant2 {
+                data: Some($value),
+                type_: Some(String::from("sender")),
+            }
+        ))
+    };
+}
 
 #[must_use]
 pub struct SenderBuilder {
@@ -93,35 +105,19 @@ impl Sender {
     #[must_use]
     pub fn to_json(&self, api: &APIVersion) -> SenderJson {
         match *api {
-            V1_0 => {
-                let tags =
-                    if self.core.tags.is_empty() {
-                        None
-                    } else {
-                        Some(self.core.tags.iter().fold(
-                            BTreeMap::new(),
-                            |mut map, (key, array)| {
-                                let value = serde_json::Value::from(array.clone());
-                                map.insert(key.clone(), value);
-                                map
-                            },
-                        ))
-                    };
-
-                SenderJson::V1_0(is_04::v1_0_x::Sender {
-                    id: self.core.id.to_string(),
-                    version: self.core.version.to_string(),
-                    label: self.core.label.clone(),
-                    description: self.core.description.clone(),
-                    flow_id: self.flow_id.to_string(),
-                    transport: self.transport.to_string(),
-                    tags,
-                    device_id: self.device_id.to_string(),
-                    manifest_href: self.manifest_href.clone(),
-                })
-            }
+            V1_0 => SenderJson::V1_0(v1_0_x::Sender {
+                id: self.core.id.to_string(),
+                version: self.core.version.to_string(),
+                label: self.core.label.clone(),
+                description: self.core.description.clone(),
+                flow_id: self.flow_id.to_string(),
+                transport: self.transport.to_string(),
+                tags: (!self.core.tags.is_empty()).then_some(self.core.tags_json()),
+                device_id: self.device_id.to_string(),
+                manifest_href: self.manifest_href.clone(),
+            }),
             V1_3 => {
-                SenderJson::V1_3(is_04::v1_3_x::Sender {
+                SenderJson::V1_3(v1_3_x::Sender {
                     interface_bindings: vec!["default".into()],
                     // TODO: implement caps
                     caps: None,
@@ -133,16 +129,21 @@ impl Sender {
                     tags: self.core.tags_json(),
                     device_id: self.device_id.to_string(),
                     manifest_href: None,
-                    subscription: nmos_schema::is_04::v1_3_x::SenderSubscription {
+                    subscription: v1_3_x::SenderSubscription {
                         active: false,
                         receiver_id: None,
                     },
-                    transport: nmos_schema::is_04::v1_3_x::SenderTransport::Variant0(
-                        self.transport.to_string().into(),
-                    ),
+                    transport: v1_3_x::SenderTransport::Variant0(self.transport.to_string().into()),
                 })
             }
             _ => panic!("Unsupported API"),
+        }
+    }
+
+    pub fn registration_request(&self, api: &APIVersion) -> serde_json::Value {
+        match self.to_json(api) {
+            SenderJson::V1_0(json) => registration_request!(json, v1_0_x),
+            SenderJson::V1_3(json) => registration_request!(json, v1_3_x),
         }
     }
 }
@@ -150,6 +151,6 @@ impl Sender {
 #[derive(Debug, Serialize)]
 #[serde(untagged)]
 pub enum SenderJson {
-    V1_0(is_04::v1_0_x::Sender),
-    V1_3(is_04::v1_3_x::Sender),
+    V1_0(v1_0_x::Sender),
+    V1_3(v1_3_x::Sender),
 }

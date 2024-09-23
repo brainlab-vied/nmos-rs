@@ -2,6 +2,7 @@ use std::collections::BTreeMap;
 
 use nmos_schema::is_04::{v1_0_x, v1_3_x};
 use serde::Serialize;
+use serde_json::json;
 use uuid::Uuid;
 
 use crate::{
@@ -10,6 +11,17 @@ use crate::{
 };
 
 use super::{ResourceCore, ResourceCoreBuilder};
+
+macro_rules! registration_request {
+    ($value:expr, $version:ident) => {
+        json!($version::RegistrationapiResourcePostRequest::Variant4(
+            $version::RegistrationapiResourcePostRequestHealthVariant4 {
+                data: Some($value),
+                type_: Some(String::from("source")),
+            }
+        ))
+    };
+}
 
 #[must_use]
 pub struct SourceBuilder {
@@ -79,6 +91,13 @@ impl Source {
             }
             V1_3 => SourceJson::V1_3((*self).clone().into()),
             _ => panic!("Unsupported API"),
+        }
+    }
+
+    pub fn registration_request(&self, api: &APIVersion) -> serde_json::Value {
+        match self.to_json(api) {
+            SourceJson::V1_0(json) => registration_request!(json, v1_0_x),
+            SourceJson::V1_3(json) => registration_request!(json, v1_3_x),
         }
     }
 }

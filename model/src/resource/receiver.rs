@@ -1,7 +1,8 @@
 use std::{collections::BTreeMap, vec};
 
-use nmos_schema::is_04;
+use nmos_schema::is_04::{v1_0_x, v1_3_x};
 use serde::Serialize;
+use serde_json::json;
 use uuid::Uuid;
 
 use crate::{
@@ -10,6 +11,17 @@ use crate::{
 };
 
 use super::{ResourceCore, ResourceCoreBuilder};
+
+macro_rules! registration_request {
+    ($value:expr, $version:ident) => {
+        json!($version::RegistrationapiResourcePostRequest::Variant3(
+            $version::RegistrationapiResourcePostRequestHealthVariant3 {
+                data: Some($value),
+                type_: Some(String::from("receiver")),
+            }
+        ))
+    };
+}
 
 #[must_use]
 pub struct ReceiverBuilder {
@@ -85,11 +97,11 @@ impl Receiver {
     pub fn to_json(&self, api: &APIVersion) -> ReceiverJson {
         match *api {
             V1_0 => {
-                let subscription = is_04::v1_0_x::ReceiverSubscription {
+                let subscription = v1_0_x::ReceiverSubscription {
                     sender_id: self.subscription.map(|s| s.to_string()),
                 };
 
-                ReceiverJson::V1_0(is_04::v1_0_x::Receiver {
+                ReceiverJson::V1_0(v1_0_x::Receiver {
                     id: self.core.id.to_string(),
                     version: self.core.version.to_string(),
                     label: self.core.label.clone(),
@@ -106,13 +118,20 @@ impl Receiver {
             _ => panic!("Unsupported API"),
         }
     }
+
+    pub fn registration_request(&self, api: &APIVersion) -> serde_json::Value {
+        match self.to_json(api) {
+            ReceiverJson::V1_0(json) => registration_request!(json, v1_0_x),
+            ReceiverJson::V1_3(json) => registration_request!(json, v1_3_x),
+        }
+    }
 }
 
 #[derive(Debug, Serialize)]
 #[serde(untagged)]
 pub enum ReceiverJson {
-    V1_0(is_04::v1_0_x::Receiver),
-    V1_3(is_04::v1_3_x::Receiver),
+    V1_0(v1_0_x::Receiver),
+    V1_3(v1_3_x::Receiver),
 }
 
 impl Into<nmos_schema::is_04::v1_3_x::Receiver> for Receiver {
@@ -128,16 +147,15 @@ impl Into<nmos_schema::is_04::v1_3_x::Receiver> for Receiver {
 
         match self.format {
             Format::Video => {
-                let subscription = is_04::v1_3_x::ReceiverVideoSubscription {
+                let subscription = v1_3_x::ReceiverVideoSubscription {
                     active: false,
                     sender_id: self.subscription.map(|s| s.to_string()),
                 };
-                let caps = is_04::v1_3_x::ReceiverVideoCaps { media_types: None };
-                // TODO: figure out which one is correct
+                let caps = v1_3_x::ReceiverVideoCaps { media_types: None };
                 let transport = nmos_schema::is_04::v1_3_x::ReceiverVideoTransport::Variant0(
                     self.transport.to_string().into(),
                 );
-                is_04::v1_3_x::Receiver::Variant0(is_04::v1_3_x::ReceiverVideo {
+                v1_3_x::Receiver::Variant0(v1_3_x::ReceiverVideo {
                     interface_bindings,
                     id,
                     version,
@@ -152,18 +170,18 @@ impl Into<nmos_schema::is_04::v1_3_x::Receiver> for Receiver {
                 })
             }
             Format::Audio => {
-                let subscription = is_04::v1_3_x::ReceiverAudioSubscription {
+                let subscription = v1_3_x::ReceiverAudioSubscription {
                     active: false,
                     sender_id: self.subscription.map(|s| s.to_string()),
                 };
-                let caps = is_04::v1_3_x::ReceiverAudioCaps {
+                let caps = v1_3_x::ReceiverAudioCaps {
                     // TODO: implement caps
                     media_types: None,
                 };
                 let transport = nmos_schema::is_04::v1_3_x::ReceiverAudioTransport::Variant0(
                     self.transport.to_string().into(),
                 );
-                is_04::v1_3_x::Receiver::Variant1(is_04::v1_3_x::ReceiverAudio {
+                v1_3_x::Receiver::Variant1(v1_3_x::ReceiverAudio {
                     interface_bindings,
                     id,
                     version,
@@ -178,19 +196,19 @@ impl Into<nmos_schema::is_04::v1_3_x::Receiver> for Receiver {
                 })
             }
             Format::Data => {
-                let subscription = is_04::v1_3_x::ReceiverDataSubscription {
+                let subscription = v1_3_x::ReceiverDataSubscription {
                     active: false,
                     sender_id: self.subscription.map(|s| s.to_string()),
                 };
                 let transport = nmos_schema::is_04::v1_3_x::ReceiverDataTransport::Variant0(
                     self.transport.to_string().into(),
                 );
-                let caps = is_04::v1_3_x::ReceiverDataCaps {
+                let caps = v1_3_x::ReceiverDataCaps {
                     // TODO: implement caps
                     media_types: None,
                     event_types: None,
                 };
-                is_04::v1_3_x::Receiver::Variant2(is_04::v1_3_x::ReceiverData {
+                v1_3_x::Receiver::Variant2(v1_3_x::ReceiverData {
                     interface_bindings,
                     id,
                     version,

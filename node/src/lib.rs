@@ -150,7 +150,11 @@ impl Node {
                             info!(
                                 "Discovered registry url: {} version: {:?} priority: {}",
                                 registry.url,
-                                registry.api_ver.iter().map(APIVersion::to_string),
+                                registry
+                                    .api_ver
+                                    .iter()
+                                    .map(APIVersion::to_string)
+                                    .collect::<Vec<_>>(),
                                 registry.pri
                             );
                             registries.push(registry);

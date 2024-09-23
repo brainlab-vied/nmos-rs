@@ -1,4 +1,4 @@
-use nmos_schema::is_04;
+use nmos_schema::is_04::{v1_0_x, v1_3_x};
 use serde::Serialize;
 use serde_json::json;
 use uuid::Uuid;
@@ -9,6 +9,17 @@ use crate::{
 };
 
 use super::{Device, ResourceCore, ResourceCoreBuilder};
+
+macro_rules! registration_request {
+    ($value:expr, $version:ident) => {
+        json!($version::RegistrationapiResourcePostRequest::Variant5(
+            $version::RegistrationapiResourcePostRequestHealthVariant5 {
+                data: Some($value),
+                type_: Some(String::from("flow")),
+            }
+        ))
+    };
+}
 
 #[must_use]
 pub struct FlowBuilder {
@@ -76,7 +87,7 @@ impl Flow {
             V1_0 => {
                 let parents = self.parents.iter().map(ToString::to_string).collect();
 
-                FlowJson::V1_0(is_04::v1_0_x::Flow {
+                FlowJson::V1_0(v1_0_x::Flow {
                     id: self.core.id.to_string(),
                     version: self.core.version.to_string(),
                     label: self.core.label.clone(),
@@ -91,17 +102,24 @@ impl Flow {
             _ => panic!("Unsupported API"),
         }
     }
+
+    pub fn registration_request(&self, api: &APIVersion) -> serde_json::Value {
+        match self.to_json(api) {
+            FlowJson::V1_0(json) => registration_request!(json, v1_0_x),
+            FlowJson::V1_3(json) => registration_request!(json, v1_3_x),
+        }
+    }
 }
 
 #[derive(Debug, Serialize)]
 #[serde(untagged)]
 pub enum FlowJson {
-    V1_0(is_04::v1_0_x::Flow),
-    V1_3(is_04::v1_3_x::Flow),
+    V1_0(v1_0_x::Flow),
+    V1_3(v1_3_x::Flow),
 }
 
-impl Into<is_04::v1_3_x::Flow> for Flow {
-    fn into(self) -> is_04::v1_3_x::Flow {
+impl Into<v1_3_x::Flow> for Flow {
+    fn into(self) -> v1_3_x::Flow {
         let parents = self.parents.iter().map(ToString::to_string).collect();
         let id = self.core.id.to_string();
         let version = self.core.version.to_string();
@@ -113,7 +131,7 @@ impl Into<is_04::v1_3_x::Flow> for Flow {
         let device_id = self.device_id.to_string();
         match self.format {
             Format::Video => {
-                json!(is_04::v1_3_x::FlowVideoCoded {
+                json!(v1_3_x::FlowVideoCoded {
                     id,
                     version,
                     label,
@@ -137,7 +155,7 @@ impl Into<is_04::v1_3_x::Flow> for Flow {
                     numerator: 44000,
                     denominator: None,
                 };
-                json!(is_04::v1_3_x::FlowAudioCoded {
+                json!(v1_3_x::FlowAudioCoded {
                     id,
                     version,
                     label,

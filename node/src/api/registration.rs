@@ -1,39 +1,12 @@
 use std::sync::Arc;
 
 use nmos_model::{resource, version::APIVersion, Model};
-use nmos_schema::is_04::{v1_0_x, v1_3_x};
-use serde_json::json;
 use tokio::sync::Mutex;
 use tracing::{debug, info};
 
 use crate::mdns::NmosMdnsRegistry;
 
 pub struct RegistrationApi;
-
-macro_rules! api_post_request {
-    ($resource:expr, $r_type:expr,$json_enum:ident, $request:ident, $variant:ident) => {
-        match $resource {
-            resource::$json_enum::V1_0(json) => {
-                let request = v1_0_x::$request {
-                    data: Some(json),
-                    type_: Some(String::from($r_type.to_string())),
-                };
-                json!(v1_0_x::RegistrationapiResourcePostRequest::$variant(
-                    request
-                ))
-            }
-            resource::$json_enum::V1_3(json) => {
-                let request = v1_3_x::$request {
-                    data: Some(json),
-                    type_: Some(String::from($r_type.to_string())),
-                };
-                json!(v1_3_x::RegistrationapiResourcePostRequest::$variant(
-                    request
-                ))
-            }
-        }
-    };
-}
 
 impl RegistrationApi {
     async fn register_node(
@@ -44,13 +17,7 @@ impl RegistrationApi {
     ) -> Result<(), Box<dyn std::error::Error>> {
         client
             .post(url.clone())
-            .json(&api_post_request!(
-                node.to_json(&api_version),
-                "node",
-                NodeJson,
-                RegistrationapiResourcePostRequestHealthVariant0,
-                Variant0
-            ))
+            .json(&node.registration_request(api_version))
             .send()
             .await?
             .error_for_status()?;
@@ -66,13 +33,7 @@ impl RegistrationApi {
     ) -> Result<(), Box<dyn std::error::Error>> {
         client
             .post(url.clone())
-            .json(&api_post_request!(
-                device.to_json(&api_version),
-                "device",
-                DeviceJson,
-                RegistrationapiResourcePostRequestHealthVariant1,
-                Variant1
-            ))
+            .json(&device.registration_request(api_version))
             .send()
             .await?
             .error_for_status()?;
@@ -88,13 +49,7 @@ impl RegistrationApi {
     ) -> Result<(), Box<dyn std::error::Error>> {
         client
             .post(url.clone())
-            .json(&api_post_request!(
-                source.to_json(&api_version),
-                "source",
-                SourceJson,
-                RegistrationapiResourcePostRequestHealthVariant4,
-                Variant4
-            ))
+            .json(&source.registration_request(api_version))
             .send()
             .await?
             .error_for_status()?;
@@ -110,13 +65,7 @@ impl RegistrationApi {
     ) -> Result<(), Box<dyn std::error::Error>> {
         client
             .post(url.clone())
-            .json(&api_post_request!(
-                flow.to_json(&api_version),
-                "flow",
-                FlowJson,
-                RegistrationapiResourcePostRequestHealthVariant5,
-                Variant5
-            ))
+            .json(&flow.registration_request(api_version))
             .send()
             .await?
             .error_for_status()?;
@@ -132,13 +81,7 @@ impl RegistrationApi {
     ) -> Result<(), Box<dyn std::error::Error>> {
         client
             .post(url.clone())
-            .json(&api_post_request!(
-                sender.to_json(&api_version),
-                "sender",
-                SenderJson,
-                RegistrationapiResourcePostRequestHealthVariant2,
-                Variant2
-            ))
+            .json(&sender.registration_request(api_version))
             .send()
             .await?
             .error_for_status()?;
@@ -154,13 +97,7 @@ impl RegistrationApi {
     ) -> Result<(), Box<dyn std::error::Error>> {
         client
             .post(url.clone())
-            .json(&api_post_request!(
-                receiver.to_json(&api_version),
-                "receiver",
-                ReceiverJson,
-                RegistrationapiResourcePostRequestHealthVariant3,
-                Variant3
-            ))
+            .json(&receiver.registration_request(api_version))
             .send()
             .await?
             .error_for_status()?;

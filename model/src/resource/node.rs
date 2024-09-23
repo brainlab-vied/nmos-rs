@@ -1,11 +1,23 @@
 use std::collections::BTreeMap;
 
-use nmos_schema::is_04;
+use nmos_schema::is_04::{v1_0_x, v1_3_x};
 use serde::Serialize;
+use serde_json::json;
 
 use crate::version::{is_04::V1_0, is_04::V1_3, APIVersion};
 
 use super::{ResourceCore, ResourceCoreBuilder};
+
+macro_rules! registration_request {
+    ($value:expr, $version:ident) => {
+        json!($version::RegistrationapiResourcePostRequest::Variant0(
+            $version::RegistrationapiResourcePostRequestHealthVariant0 {
+                data: Some($value),
+                type_: Some(String::from("node")),
+            }
+        ))
+    };
+}
 
 #[derive(Debug)]
 pub struct NodeService {
@@ -67,13 +79,13 @@ impl Node {
                 let services = self
                     .services
                     .iter()
-                    .map(|service| is_04::v1_0_x::NodeItemServices {
+                    .map(|service| v1_0_x::NodeItemServices {
                         href: service.href.clone(),
                         type_: service.type_.clone(),
                     })
                     .collect();
 
-                NodeJson::V1_0(is_04::v1_0_x::Node {
+                NodeJson::V1_0(v1_0_x::Node {
                     id: self.core.id.to_string(),
                     version: self.core.version.to_string(),
                     label: self.core.label.clone(),
@@ -87,14 +99,14 @@ impl Node {
                 let services = self
                     .services
                     .iter()
-                    .map(|service| is_04::v1_3_x::NodeItemServices {
+                    .map(|service| v1_3_x::NodeItemServices {
                         authorization: None,
                         href: service.href.clone(),
                         type_: service.type_.clone(),
                     })
                     .collect();
 
-                NodeJson::V1_3(is_04::v1_3_x::Node {
+                NodeJson::V1_3(v1_3_x::Node {
                     description: self.core.description.to_string(),
                     id: self.core.id.to_string(),
                     version: self.core.version.to_string(),
@@ -104,9 +116,9 @@ impl Node {
                     caps: BTreeMap::default(),
                     clocks: vec![serde_json::json!({"name": "clk0", "ref_type": "internal"})],
                     interfaces: vec![],
-                    api: nmos_schema::is_04::v1_3_x::NodeApi {
+                    api: v1_3_x::NodeApi {
                         versions: vec![V1_3.to_string()],
-                        endpoints: vec![is_04::v1_3_x::NodeApiItemEndpoints {
+                        endpoints: vec![v1_3_x::NodeApiItemEndpoints {
                             host: serde_json::json!(self.href.host_str().unwrap()),
                             port: self.href.port().unwrap() as i64,
                             protocol: "http".into(),
@@ -120,11 +132,18 @@ impl Node {
             _ => panic!("Unsupported API"),
         }
     }
+
+    pub fn registration_request(&self, api: &APIVersion) -> serde_json::Value {
+        match self.to_json(api) {
+            NodeJson::V1_0(json) => registration_request!(json, v1_0_x),
+            NodeJson::V1_3(json) => registration_request!(json, v1_3_x),
+        }
+    }
 }
 
 #[derive(Debug, Serialize)]
 #[serde(untagged)]
 pub enum NodeJson {
-    V1_0(is_04::v1_0_x::Node),
-    V1_3(is_04::v1_3_x::Node),
+    V1_0(v1_0_x::Node),
+    V1_3(v1_3_x::Node),
 }
