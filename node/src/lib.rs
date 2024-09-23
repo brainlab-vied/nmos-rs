@@ -222,15 +222,15 @@ impl Node {
                     let model = self.model.lock().await;
                     let nodes = model.nodes().await;
                     let node_id = *nodes.iter().next().unwrap().0;
-                    let base = &registry
+
+                    let mut base = registry
                         .url
-                        .join(self.api_version.to_string().as_str())
+                        .join(&format!("{}/", self.api_version)) // Ensure it ends with a '/'
                         .unwrap();
 
-                    base.join(&format!("health/nodes/{}", node_id)).unwrap()
+                    base = base.join(&format!("health/nodes/{}", node_id)).unwrap();
+                    base
                 };
-
-                tokio::time::sleep(Duration::from_secs(1)).await;
 
                 let mut attempts = 0;
                 // Send heartbeat every 5 seconds
