@@ -83,7 +83,7 @@ impl SenderBuilder {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Sender {
     pub core: ResourceCore,
     pub flow_id: Uuid,
@@ -105,37 +105,8 @@ impl Sender {
     #[must_use]
     pub fn to_json(&self, api: &APIVersion) -> SenderJson {
         match *api {
-            V1_0 => SenderJson::V1_0(v1_0_x::Sender {
-                id: self.core.id.to_string(),
-                version: self.core.version.to_string(),
-                label: self.core.label.clone(),
-                description: self.core.description.clone(),
-                flow_id: self.flow_id.to_string(),
-                transport: self.transport.to_string(),
-                tags: (!self.core.tags.is_empty()).then_some(self.core.tags_json()),
-                device_id: self.device_id.to_string(),
-                manifest_href: self.manifest_href.clone(),
-            }),
-            V1_3 => {
-                SenderJson::V1_3(v1_3_x::Sender {
-                    interface_bindings: vec![],
-                    // TODO: implement caps
-                    caps: None,
-                    id: self.core.id.to_string(),
-                    version: self.core.version.to_string(),
-                    label: self.core.label.clone(),
-                    description: self.core.description.clone(),
-                    flow_id: Some(self.flow_id.to_string()),
-                    tags: self.core.tags_json(),
-                    device_id: self.device_id.to_string(),
-                    manifest_href: None,
-                    subscription: v1_3_x::SenderSubscription {
-                        active: false,
-                        receiver_id: None,
-                    },
-                    transport: v1_3_x::SenderTransport::Variant0(self.transport.to_string().into()),
-                })
-            }
+            V1_0 => SenderJson::V1_0((*self).clone().into()),
+            V1_3 => SenderJson::V1_3((*self).clone().into()),
             _ => panic!("Unsupported API"),
         }
     }
@@ -159,4 +130,42 @@ impl Registerable for Sender {
 pub enum SenderJson {
     V1_0(v1_0_x::Sender),
     V1_3(v1_3_x::Sender),
+}
+
+impl Into<v1_0_x::Sender> for Sender {
+    fn into(self) -> v1_0_x::Sender {
+        v1_0_x::Sender {
+            id: self.core.id.to_string(),
+            version: self.core.version.to_string(),
+            label: self.core.label.clone(),
+            description: self.core.description.clone(),
+            flow_id: self.flow_id.to_string(),
+            transport: self.transport.to_string(),
+            tags: (!self.core.tags.is_empty()).then_some(self.core.tags_json()),
+            device_id: self.device_id.to_string(),
+            manifest_href: self.manifest_href.clone(),
+        }
+    }
+}
+impl Into<v1_3_x::Sender> for Sender {
+    fn into(self) -> v1_3_x::Sender {
+        v1_3_x::Sender {
+            interface_bindings: vec![],
+            // TODO: implement caps
+            caps: None,
+            id: self.core.id.to_string(),
+            version: self.core.version.to_string(),
+            label: self.core.label.clone(),
+            description: self.core.description.clone(),
+            flow_id: Some(self.flow_id.to_string()),
+            tags: self.core.tags_json(),
+            device_id: self.device_id.to_string(),
+            manifest_href: None,
+            subscription: v1_3_x::SenderSubscription {
+                active: false,
+                receiver_id: None,
+            },
+            transport: v1_3_x::SenderTransport::Variant0(self.transport.to_string().into()),
+        }
+    }
 }

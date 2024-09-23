@@ -84,20 +84,7 @@ impl Flow {
     #[must_use]
     pub fn to_json(&self, api: &APIVersion) -> FlowJson {
         match *api {
-            V1_0 => {
-                let parents = self.parents.iter().map(ToString::to_string).collect();
-
-                FlowJson::V1_0(v1_0_x::Flow {
-                    id: self.core.id.to_string(),
-                    version: self.core.version.to_string(),
-                    label: self.core.label.clone(),
-                    description: self.core.description.clone(),
-                    format: self.format.to_string(),
-                    tags: self.core.tags_json(),
-                    source_id: self.source_id.to_string(),
-                    parents,
-                })
-            }
+            V1_0 => FlowJson::V1_0((*self).clone().into()),
             V1_3 => FlowJson::V1_3((*self).clone().into()),
             _ => panic!("Unsupported API"),
         }
@@ -122,6 +109,23 @@ impl Registerable for Flow {
 pub enum FlowJson {
     V1_0(v1_0_x::Flow),
     V1_3(v1_3_x::Flow),
+}
+
+impl Into<v1_0_x::Flow> for Flow {
+    fn into(self) -> v1_0_x::Flow {
+        let parents = self.parents.iter().map(ToString::to_string).collect();
+
+        v1_0_x::Flow {
+            id: self.core.id.to_string(),
+            version: self.core.version.to_string(),
+            label: self.core.label.clone(),
+            description: self.core.description.clone(),
+            format: self.format.to_string(),
+            tags: self.core.tags_json(),
+            source_id: self.source_id.to_string(),
+            parents,
+        }
+    }
 }
 
 impl Into<v1_3_x::Flow> for Flow {

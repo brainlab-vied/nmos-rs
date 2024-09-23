@@ -19,7 +19,7 @@ macro_rules! registration_request {
     };
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct NodeService {
     pub href: String,
     pub type_: String,
@@ -59,7 +59,7 @@ impl NodeBuilder {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Node {
     pub core: ResourceCore,
     pub href: url::Url,
@@ -75,60 +75,8 @@ impl Node {
     #[must_use]
     pub fn to_json(&self, api: &APIVersion) -> NodeJson {
         match *api {
-            V1_0 => {
-                let services = self
-                    .services
-                    .iter()
-                    .map(|service| v1_0_x::NodeItemServices {
-                        href: service.href.clone(),
-                        type_: service.type_.clone(),
-                    })
-                    .collect();
-
-                NodeJson::V1_0(v1_0_x::Node {
-                    id: self.core.id.to_string(),
-                    version: self.core.version.to_string(),
-                    label: self.core.label.clone(),
-                    href: self.href.to_string(),
-                    hostname: self.hostname.clone(),
-                    caps: BTreeMap::default(),
-                    services,
-                })
-            }
-            V1_3 => {
-                let services = self
-                    .services
-                    .iter()
-                    .map(|service| v1_3_x::NodeItemServices {
-                        authorization: None,
-                        href: service.href.clone(),
-                        type_: service.type_.clone(),
-                    })
-                    .collect();
-
-                NodeJson::V1_3(v1_3_x::Node {
-                    description: self.core.description.to_string(),
-                    id: self.core.id.to_string(),
-                    version: self.core.version.to_string(),
-                    label: self.core.label.clone(),
-                    href: self.href.to_string(),
-                    hostname: self.hostname.clone(),
-                    caps: BTreeMap::default(),
-                    clocks: vec![serde_json::json!({"name": "clk0", "ref_type": "internal"})],
-                    interfaces: vec![],
-                    api: v1_3_x::NodeApi {
-                        versions: vec![V1_3.to_string()],
-                        endpoints: vec![v1_3_x::NodeApiItemEndpoints {
-                            host: serde_json::json!(self.href.host_str().unwrap()),
-                            port: self.href.port().unwrap() as i64,
-                            protocol: "http".into(),
-                            authorization: Some(false),
-                        }],
-                    },
-                    tags: self.core.tags_json(),
-                    services,
-                })
-            }
+            V1_0 => NodeJson::V1_0((*self).clone().into()),
+            V1_3 => NodeJson::V1_3((*self).clone().into()),
             _ => panic!("Unsupported API"),
         }
     }
@@ -152,4 +100,64 @@ impl Registerable for Node {
 pub enum NodeJson {
     V1_0(v1_0_x::Node),
     V1_3(v1_3_x::Node),
+}
+
+impl Into<v1_0_x::Node> for Node {
+    fn into(self) -> v1_0_x::Node {
+        let services = self
+            .services
+            .iter()
+            .map(|service| v1_0_x::NodeItemServices {
+                href: service.href.clone(),
+                type_: service.type_.clone(),
+            })
+            .collect();
+
+        v1_0_x::Node {
+            id: self.core.id.to_string(),
+            version: self.core.version.to_string(),
+            label: self.core.label.clone(),
+            href: self.href.to_string(),
+            hostname: self.hostname.clone(),
+            caps: BTreeMap::default(),
+            services,
+        }
+    }
+}
+
+impl Into<v1_3_x::Node> for Node {
+    fn into(self) -> v1_3_x::Node {
+        let services = self
+            .services
+            .iter()
+            .map(|service| v1_3_x::NodeItemServices {
+                authorization: None,
+                href: service.href.clone(),
+                type_: service.type_.clone(),
+            })
+            .collect();
+
+        v1_3_x::Node {
+            description: self.core.description.to_string(),
+            id: self.core.id.to_string(),
+            version: self.core.version.to_string(),
+            label: self.core.label.clone(),
+            href: self.href.to_string(),
+            hostname: self.hostname.clone(),
+            caps: BTreeMap::default(),
+            clocks: vec![serde_json::json!({"name": "clk0", "ref_type": "internal"})],
+            interfaces: vec![],
+            api: v1_3_x::NodeApi {
+                versions: vec![V1_3.to_string()],
+                endpoints: vec![v1_3_x::NodeApiItemEndpoints {
+                    host: serde_json::json!(self.href.host_str().unwrap()),
+                    port: self.href.port().unwrap() as i64,
+                    protocol: "http".into(),
+                    authorization: Some(false),
+                }],
+            },
+            tags: self.core.tags_json(),
+            services,
+        }
+    }
 }

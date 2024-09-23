@@ -73,22 +73,7 @@ impl Source {
     #[must_use]
     pub fn to_json(&self, api: &APIVersion) -> SourceJson {
         match *api {
-            V1_0 => {
-                let tags = self.core.tags_json();
-                let parents = self.parents.iter().map(ToString::to_string).collect();
-
-                SourceJson::V1_0(v1_0_x::Source {
-                    id: self.core.id.to_string(),
-                    version: self.core.version.to_string(),
-                    label: self.core.label.clone(),
-                    description: self.core.description.clone(),
-                    format: self.format.to_string(),
-                    caps: BTreeMap::default(),
-                    tags,
-                    device_id: self.device_id.to_string(),
-                    parents,
-                })
-            }
+            V1_0 => SourceJson::V1_0((*self).clone().into()),
             V1_3 => SourceJson::V1_3((*self).clone().into()),
             _ => panic!("Unsupported API"),
         }
@@ -113,6 +98,25 @@ impl Registerable for Source {
 pub enum SourceJson {
     V1_0(v1_0_x::Source),
     V1_3(v1_3_x::Source),
+}
+
+impl Into<v1_0_x::Source> for Source {
+    fn into(self) -> v1_0_x::Source {
+        let tags = self.core.tags_json();
+        let parents = self.parents.iter().map(ToString::to_string).collect();
+
+        v1_0_x::Source {
+            id: self.core.id.to_string(),
+            version: self.core.version.to_string(),
+            label: self.core.label.clone(),
+            description: self.core.description.clone(),
+            format: self.format.to_string(),
+            caps: BTreeMap::default(),
+            tags,
+            device_id: self.device_id.to_string(),
+            parents,
+        }
+    }
 }
 
 impl Into<v1_3_x::Source> for Source {

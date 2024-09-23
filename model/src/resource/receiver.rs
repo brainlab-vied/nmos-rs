@@ -96,24 +96,7 @@ impl Receiver {
     #[must_use]
     pub fn to_json(&self, api: &APIVersion) -> ReceiverJson {
         match *api {
-            V1_0 => {
-                let subscription = v1_0_x::ReceiverSubscription {
-                    sender_id: self.subscription.map(|s| s.to_string()),
-                };
-
-                ReceiverJson::V1_0(v1_0_x::Receiver {
-                    id: self.core.id.to_string(),
-                    version: self.core.version.to_string(),
-                    label: self.core.label.clone(),
-                    description: self.core.description.clone(),
-                    format: self.format.to_string(),
-                    caps: BTreeMap::default(),
-                    tags: self.core.tags_json(),
-                    device_id: self.device_id.to_string(),
-                    transport: self.transport.to_string(),
-                    subscription,
-                })
-            }
+            V1_0 => ReceiverJson::V1_0((*self).clone().into()),
             V1_3 => ReceiverJson::V1_3((*self).clone().into()),
             _ => panic!("Unsupported API"),
         }
@@ -140,8 +123,29 @@ pub enum ReceiverJson {
     V1_3(v1_3_x::Receiver),
 }
 
-impl Into<nmos_schema::is_04::v1_3_x::Receiver> for Receiver {
-    fn into(self) -> nmos_schema::is_04::v1_3_x::Receiver {
+impl Into<v1_0_x::Receiver> for Receiver {
+    fn into(self) -> v1_0_x::Receiver {
+        let subscription = v1_0_x::ReceiverSubscription {
+            sender_id: self.subscription.map(|s| s.to_string()),
+        };
+
+        v1_0_x::Receiver {
+            id: self.core.id.to_string(),
+            version: self.core.version.to_string(),
+            label: self.core.label.clone(),
+            description: self.core.description.clone(),
+            format: self.format.to_string(),
+            caps: BTreeMap::default(),
+            tags: self.core.tags_json(),
+            device_id: self.device_id.to_string(),
+            transport: self.transport.to_string(),
+            subscription,
+        }
+    }
+}
+
+impl Into<v1_3_x::Receiver> for Receiver {
+    fn into(self) -> v1_3_x::Receiver {
         let tags = self.core.tags_json();
         let interface_bindings: Vec<std::string::String> = vec![];
         let id = self.core.id.to_string();
@@ -158,9 +162,8 @@ impl Into<nmos_schema::is_04::v1_3_x::Receiver> for Receiver {
                     sender_id: self.subscription.map(|s| s.to_string()),
                 };
                 let caps = v1_3_x::ReceiverVideoCaps { media_types: None };
-                let transport = nmos_schema::is_04::v1_3_x::ReceiverVideoTransport::Variant0(
-                    self.transport.to_string().into(),
-                );
+                let transport =
+                    v1_3_x::ReceiverVideoTransport::Variant0(self.transport.to_string().into());
                 v1_3_x::Receiver::Variant0(v1_3_x::ReceiverVideo {
                     interface_bindings,
                     id,
@@ -184,9 +187,8 @@ impl Into<nmos_schema::is_04::v1_3_x::Receiver> for Receiver {
                     // TODO: implement caps
                     media_types: None,
                 };
-                let transport = nmos_schema::is_04::v1_3_x::ReceiverAudioTransport::Variant0(
-                    self.transport.to_string().into(),
-                );
+                let transport =
+                    v1_3_x::ReceiverAudioTransport::Variant0(self.transport.to_string().into());
                 v1_3_x::Receiver::Variant1(v1_3_x::ReceiverAudio {
                     interface_bindings,
                     id,
@@ -206,9 +208,8 @@ impl Into<nmos_schema::is_04::v1_3_x::Receiver> for Receiver {
                     active: false,
                     sender_id: self.subscription.map(|s| s.to_string()),
                 };
-                let transport = nmos_schema::is_04::v1_3_x::ReceiverDataTransport::Variant0(
-                    self.transport.to_string().into(),
-                );
+                let transport =
+                    v1_3_x::ReceiverDataTransport::Variant0(self.transport.to_string().into());
                 let caps = v1_3_x::ReceiverDataCaps {
                     // TODO: implement caps
                     media_types: None,

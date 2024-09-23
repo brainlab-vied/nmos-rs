@@ -66,7 +66,7 @@ impl DeviceBuilder {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Device {
     pub core: ResourceCore,
     pub type_: DeviceType,
@@ -86,33 +86,9 @@ impl Device {
 
     #[must_use]
     pub fn to_json(&self, api: &APIVersion) -> DeviceJson {
-        // Senders
-        let senders = self.senders.iter().map(ToString::to_string).collect();
-
-        // Receivers
-        let receivers = self.receivers.iter().map(ToString::to_string).collect();
         match *api {
-            V1_0 => DeviceJson::V1_0(v1_0_x::Device {
-                id: self.core.id.to_string(),
-                version: self.core.version.to_string(),
-                label: self.core.label.clone(),
-                type_: self.type_.to_string(),
-                node_id: self.node_id.to_string(),
-                senders,
-                receivers,
-            }),
-            V1_3 => DeviceJson::V1_3(v1_3_x::Device {
-                id: self.core.id.to_string(),
-                version: self.core.version.to_string(),
-                label: self.core.label.clone(),
-                type_: v1_3_x::DeviceType::Variant0(self.type_.to_string().into()),
-                node_id: self.node_id.to_string(),
-                senders,
-                receivers,
-                tags: self.core.tags_json(),
-                description: "".to_string(),
-                controls: vec![],
-            }),
+            V1_0 => DeviceJson::V1_0((*self).clone().into()),
+            V1_3 => DeviceJson::V1_3((*self).clone().into()),
             _ => panic!("Unsupported API"),
         }
     }
@@ -136,4 +112,39 @@ impl Registerable for Device {
 pub enum DeviceJson {
     V1_0(v1_0_x::Device),
     V1_3(v1_3_x::Device),
+}
+
+impl Into<v1_0_x::Device> for Device {
+    fn into(self) -> v1_0_x::Device {
+        let senders = self.senders.iter().map(ToString::to_string).collect();
+        let receivers = self.receivers.iter().map(ToString::to_string).collect();
+        v1_0_x::Device {
+            id: self.core.id.to_string(),
+            version: self.core.version.to_string(),
+            label: self.core.label.clone(),
+            type_: self.type_.to_string(),
+            node_id: self.node_id.to_string(),
+            senders,
+            receivers,
+        }
+    }
+}
+
+impl Into<v1_3_x::Device> for Device {
+    fn into(self) -> v1_3_x::Device {
+        let senders = self.senders.iter().map(ToString::to_string).collect();
+        let receivers = self.receivers.iter().map(ToString::to_string).collect();
+        v1_3_x::Device {
+            id: self.core.id.to_string(),
+            version: self.core.version.to_string(),
+            label: self.core.label.clone(),
+            type_: v1_3_x::DeviceType::Variant0(self.type_.to_string().into()),
+            node_id: self.node_id.to_string(),
+            senders,
+            receivers,
+            tags: self.core.tags_json(),
+            description: "".to_string(),
+            controls: vec![],
+        }
+    }
 }
