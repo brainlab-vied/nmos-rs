@@ -33,6 +33,8 @@ pub struct NodeBuilder {
     event_handler: Option<Arc<dyn EventHandler>>,
     address: SocketAddr,
     api_version: APIVersion,
+    heartbeat_interval: u64,
+    registry_timeout: u64,
 }
 
 impl NodeBuilder {
@@ -42,6 +44,8 @@ impl NodeBuilder {
             event_handler: None,
             address: ([0, 0, 0, 0], 3000).into(),
             api_version: V1_3,
+            heartbeat_interval: 5,
+            registry_timeout: 5,
         }
     }
 
@@ -51,6 +55,8 @@ impl NodeBuilder {
             event_handler: None,
             address: ([0, 0, 0, 0], 3000).into(),
             api_version: V1_3,
+            heartbeat_interval: 5,
+            registry_timeout: 5,
         }
     }
 
@@ -66,6 +72,16 @@ impl NodeBuilder {
 
     pub fn with_api_version(mut self, api_version: APIVersion) -> Self {
         self.api_version = api_version;
+        self
+    }
+
+    pub fn with_registration_timeout(mut self, timeout: u64) -> Self {
+        self.registry_timeout = timeout;
+        self
+    }
+
+    pub fn with_heartbeat_interval(mut self, interval: u64) -> Self {
+        self.heartbeat_interval = interval;
         self
     }
 
@@ -86,6 +102,8 @@ impl NodeBuilder {
             registries,
             address: self.address,
             api_version: self.api_version,
+            registry_timeout: self.registry_timeout,
+            heartbeat_interval: self.heartbeat_interval,
         }
     }
 }
@@ -97,6 +115,8 @@ pub struct Node {
     registries: Arc<Mutex<BinaryHeap<NmosMdnsRegistry>>>,
     address: SocketAddr,
     api_version: APIVersion,
+    heartbeat_interval: u64,
+    registry_timeout: u64,
 }
 
 impl Node {
@@ -178,13 +198,13 @@ impl Node {
         let registration = async {
             // Create http client
             let client = reqwest::Client::builder()
-                .timeout(Duration::from_secs(5))
+                .timeout(Duration::from_secs(self.registry_timeout))
                 .build()
                 .unwrap();
 
             loop {
                 // Wait for registry discovery
-                tokio::time::sleep(Duration::from_secs(5)).await;
+                tokio::time::sleep(Duration::from_secs(self.heartbeat_interval)).await;
 
                 // Try and get highest priority registry
                 let registry = {
