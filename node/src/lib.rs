@@ -4,6 +4,7 @@ use axum::{http::Method, Server};
 pub use event_handler::EventHandler;
 use mdns::MdnsContext;
 use nmos_model::{resource::ResourceBundle, Model};
+use reqwest::StatusCode;
 use tokio::{
     runtime::Runtime,
     sync::{mpsc, Mutex},
@@ -144,11 +145,16 @@ impl Node {
             while let Some(event) = rx.recv().await {
                 if let NmosMdnsEvent::Discovery(_, Ok(discovery)) = event {
                     if let Some(registry) = NmosMdnsRegistry::parse(&discovery) {
-                        info!(
-                            "Discovered registry url: {} version: {:?}",
-                            registry.url, registry.api_ver
-                        );
-                        registries.lock().await.push(registry);
+                        let mut registries = registries.lock().await;
+                        if registries.iter().find(|&reg| reg == &registry).is_none() {
+                            info!(
+                                "Discovered registry url: {} version: {:?} priority: {}",
+                                registry.url,
+                                registry.api_ver.iter().map(APIVersion::to_string),
+                                registry.pri
+                            );
+                            registries.push(registry);
+                        }
                     }
                 }
             }
@@ -220,12 +226,31 @@ impl Node {
                     base.join(&format!("health/nodes/{}", node_id)).unwrap()
                 };
 
+                tokio::time::sleep(Duration::from_secs(1)).await;
+
+                let mut attempts = 0;
                 // Send heartbeat every 5 seconds
                 loop {
                     info!("Heart-beating to {}", heartbeat_url);
                     match client.post(heartbeat_url.clone()).send().await {
                         Ok(res) => {
                             if !res.status().is_success() {
+                                if res.status() == StatusCode::NOT_FOUND && attempts < 1 {
+                                    match RegistrationApi::register_resources(
+                                        &client,
+                                        self.model.clone(),
+                                        &registry,
+                                        &self.api_version,
+                                    )
+                                    .await
+                                    {
+                                        Ok(_) => {
+                                            attempts += 1;
+                                            continue;
+                                        }
+                                        Err(_) => break,
+                                    }
+                                }
                                 error!("Heartbeat error {}", res.status());
                                 break;
                             }

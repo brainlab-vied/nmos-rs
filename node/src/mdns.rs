@@ -30,11 +30,10 @@ pub struct NmosMdnsRegistry {
 
 impl NmosMdnsRegistry {
     pub fn parse(discovery: &ServiceDiscovery) -> Option<Self> {
+        debug!("{:?}", discovery);
+
         // TXT record required
-        let txt = match discovery.txt() {
-            Some(txt) => txt,
-            None => return None,
-        };
+        let txt = discovery.txt().to_owned()?;
 
         // Get required fields
         if let (Some(api_proto), Some(api_ver), Some(api_auth), Some(pri)) = (
@@ -44,6 +43,9 @@ impl NmosMdnsRegistry {
             txt.get("pri"),
         ) {
             // TODO: Validate fields
+            if !["http", "https"].contains(&api_proto.as_str()) {
+                return None;
+            }
 
             let address = discovery.address();
             let port = discovery.port();
@@ -57,7 +59,7 @@ impl NmosMdnsRegistry {
             let authority = socket.to_string();
 
             // Build URL
-            let base = format!("{}://{}/x-nmos/registration/", api_proto, authority);
+            let base = format!("{api_proto}://{authority}/x-nmos/registration/");
 
             let url = match Url::parse(&base) {
                 Ok(url) => url,
