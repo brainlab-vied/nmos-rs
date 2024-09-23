@@ -9,7 +9,7 @@ pub use receiver::{Receiver, ReceiverBuilder, ReceiverJson};
 pub use sender::{Sender, SenderBuilder, SenderJson};
 pub use source::{Source, SourceBuilder, SourceJson};
 
-use crate::tai::TaiTime;
+use crate::{tai::TaiTime, version::APIVersion};
 
 pub mod device;
 pub mod flow;
@@ -32,6 +32,11 @@ pub enum Transport {
     RtpMulticast,
     Dash,
     Http,
+}
+
+pub trait Registerable {
+    fn registry_path(&self) -> String;
+    fn registration_request(&self, api: &APIVersion) -> serde_json::Value;
 }
 
 impl fmt::Display for Format {

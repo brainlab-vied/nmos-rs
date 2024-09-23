@@ -1,106 +1,59 @@
 use std::sync::Arc;
 
-use nmos_model::{resource, version::APIVersion, Model};
+use nmos_model::{
+    resource::{self},
+    version::APIVersion,
+    Model,
+};
+use reqwest::StatusCode;
 use tokio::sync::Mutex;
-use tracing::{debug, info};
+use tracing::{debug, info, warn};
 
 use crate::mdns::NmosMdnsRegistry;
 
 pub struct RegistrationApi;
 
 impl RegistrationApi {
-    async fn register_node(
+    async fn register_resource(
         client: &reqwest::Client,
         url: &reqwest::Url,
-        node: &resource::Node,
+        resource: &impl resource::Registerable,
         api_version: &APIVersion,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        client
+        let request = resource.registration_request(api_version);
+
+        let res = client
             .post(url.clone())
-            .json(&node.registration_request(api_version))
+            .json(&request)
             .send()
             .await?
             .error_for_status()?;
 
-        Ok(())
-    }
+        if res.status() == StatusCode::OK {
+            let mut delete_url = url.clone();
+            delete_url
+                .path_segments_mut()
+                .unwrap()
+                .push(resource.registry_path().as_str());
 
-    async fn register_device(
-        client: &reqwest::Client,
-        url: &reqwest::Url,
-        device: &resource::Device,
-        api_version: &APIVersion,
-    ) -> Result<(), Box<dyn std::error::Error>> {
-        client
-            .post(url.clone())
-            .json(&device.registration_request(api_version))
-            .send()
-            .await?
-            .error_for_status()?;
+            warn!("Resource already present in API deleting: {}", delete_url);
 
-        Ok(())
-    }
+            client.delete(delete_url).send().await?.error_for_status()?;
 
-    async fn register_source(
-        client: &reqwest::Client,
-        url: &reqwest::Url,
-        source: &resource::Source,
-        api_version: &APIVersion,
-    ) -> Result<(), Box<dyn std::error::Error>> {
-        client
-            .post(url.clone())
-            .json(&source.registration_request(api_version))
-            .send()
-            .await?
-            .error_for_status()?;
+            let res = client
+                .post(url.clone())
+                .json(&request)
+                .send()
+                .await?
+                .error_for_status()?;
 
-        Ok(())
-    }
-
-    async fn register_flow(
-        client: &reqwest::Client,
-        url: &reqwest::Url,
-        flow: &resource::Flow,
-        api_version: &APIVersion,
-    ) -> Result<(), Box<dyn std::error::Error>> {
-        client
-            .post(url.clone())
-            .json(&flow.registration_request(api_version))
-            .send()
-            .await?
-            .error_for_status()?;
-
-        Ok(())
-    }
-
-    async fn register_sender(
-        client: &reqwest::Client,
-        url: &reqwest::Url,
-        sender: &resource::Sender,
-        api_version: &APIVersion,
-    ) -> Result<(), Box<dyn std::error::Error>> {
-        client
-            .post(url.clone())
-            .json(&sender.registration_request(api_version))
-            .send()
-            .await?
-            .error_for_status()?;
-
-        Ok(())
-    }
-
-    async fn register_receiver(
-        client: &reqwest::Client,
-        url: &reqwest::Url,
-        receiver: &resource::Receiver,
-        api_version: &APIVersion,
-    ) -> Result<(), Box<dyn std::error::Error>> {
-        client
-            .post(url.clone())
-            .json(&receiver.registration_request(api_version))
-            .send()
-            .await?
-            .error_for_status()?;
+            if res.status() == StatusCode::OK {
+                return Err(Box::new(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    "Failed to register resource after deleting and re-registering",
+                )));
+            }
+        }
 
         Ok(())
     }
@@ -118,37 +71,34 @@ impl RegistrationApi {
             .join(format!("{}/", api_version.to_string()).as_str())
             .unwrap();
 
-        info!("Attempting to register with {}", base);
-
-        // Resource endpoint
         let resource_url = &base.join("resource").unwrap();
 
-        // Get node
-        let nodes = model.nodes().await;
-        let node = nodes.iter().next().unwrap().1;
+        info!("Attempting to register with {}", resource_url);
 
         // Register resources in order
-        debug!("Registering node...");
-        Self::register_node(client, resource_url, node, api_version).await?;
+        debug!("Registering nodes...");
+        for (_, node) in model.nodes().await.iter() {
+            Self::register_resource(client, resource_url, node, api_version).await?;
+        }
         debug!("Registering devices...");
         for (_, device) in model.devices().await.iter() {
-            Self::register_device(client, resource_url, device, api_version).await?;
+            Self::register_resource(client, resource_url, device, api_version).await?;
         }
         debug!("Registering sources...");
         for (_, source) in model.sources().await.iter() {
-            Self::register_source(client, resource_url, source, api_version).await?;
+            Self::register_resource(client, resource_url, source, api_version).await?;
         }
         debug!("Registering flows...");
         for (_, flow) in model.flows().await.iter() {
-            Self::register_flow(client, resource_url, flow, api_version).await?;
+            Self::register_resource(client, resource_url, flow, api_version).await?;
         }
         debug!("Registering senders...");
         for (_, sender) in model.senders().await.iter() {
-            Self::register_sender(client, resource_url, sender, api_version).await?;
+            Self::register_resource(client, resource_url, sender, api_version).await?;
         }
         debug!("Registering receivers...");
         for (_, receiver) in model.receivers().await.iter() {
-            Self::register_receiver(client, resource_url, receiver, api_version).await?;
+            Self::register_resource(client, resource_url, receiver, api_version).await?;
         }
 
         Ok(())

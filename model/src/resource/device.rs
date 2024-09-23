@@ -10,7 +10,7 @@ use crate::{
     version::{is_04::V1_0, is_04::V1_3, APIVersion},
 };
 
-use super::{ResourceCore, ResourceCoreBuilder};
+use super::{Registerable, ResourceCore, ResourceCoreBuilder};
 
 macro_rules! registration_request {
     ($value:expr, $version:ident) => {
@@ -116,8 +116,14 @@ impl Device {
             _ => panic!("Unsupported API"),
         }
     }
+}
 
-    pub fn registration_request(&self, api: &APIVersion) -> serde_json::Value {
+impl Registerable for Device {
+    fn registry_path(&self) -> String {
+        format!("devices/{}", self.core.id)
+    }
+
+    fn registration_request(&self, api: &APIVersion) -> serde_json::Value {
         match self.to_json(api) {
             DeviceJson::V1_0(json) => registration_request!(json, v1_0_x),
             DeviceJson::V1_3(json) => registration_request!(json, v1_3_x),

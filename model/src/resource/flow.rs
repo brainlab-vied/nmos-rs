@@ -8,7 +8,7 @@ use crate::{
     version::{is_04::V1_0, is_04::V1_3, APIVersion},
 };
 
-use super::{Device, ResourceCore, ResourceCoreBuilder};
+use super::{Device, Registerable, ResourceCore, ResourceCoreBuilder};
 
 macro_rules! registration_request {
     ($value:expr, $version:ident) => {
@@ -102,8 +102,14 @@ impl Flow {
             _ => panic!("Unsupported API"),
         }
     }
+}
 
-    pub fn registration_request(&self, api: &APIVersion) -> serde_json::Value {
+impl Registerable for Flow {
+    fn registry_path(&self) -> String {
+        format!("flows/{}", self.core.id)
+    }
+
+    fn registration_request(&self, api: &APIVersion) -> serde_json::Value {
         match self.to_json(api) {
             FlowJson::V1_0(json) => registration_request!(json, v1_0_x),
             FlowJson::V1_3(json) => registration_request!(json, v1_3_x),

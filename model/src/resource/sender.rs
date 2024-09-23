@@ -13,7 +13,7 @@ use crate::{
     },
 };
 
-use super::{ResourceCore, ResourceCoreBuilder};
+use super::{Registerable, ResourceCore, ResourceCoreBuilder};
 
 macro_rules! registration_request {
     ($value:expr, $version:ident) => {
@@ -139,8 +139,14 @@ impl Sender {
             _ => panic!("Unsupported API"),
         }
     }
+}
 
-    pub fn registration_request(&self, api: &APIVersion) -> serde_json::Value {
+impl Registerable for Sender {
+    fn registry_path(&self) -> String {
+        format!("senders/{}", self.core.id)
+    }
+
+    fn registration_request(&self, api: &APIVersion) -> serde_json::Value {
         match self.to_json(api) {
             SenderJson::V1_0(json) => registration_request!(json, v1_0_x),
             SenderJson::V1_3(json) => registration_request!(json, v1_3_x),
