@@ -40,7 +40,7 @@ impl NodeBuilder {
     pub fn build(self) -> Node {
         Node {
             core: self.core.build(),
-            href: self.href,
+            href: self.href.parse().unwrap(),
             hostname: self.hostname,
             services: self.services,
         }
@@ -50,7 +50,7 @@ impl NodeBuilder {
 #[derive(Debug)]
 pub struct Node {
     pub core: ResourceCore,
-    pub href: String,
+    pub href: url::Url,
     pub hostname: Option<String>,
     pub services: Vec<NodeService>,
 }
@@ -77,7 +77,7 @@ impl Node {
                     id: self.core.id.to_string(),
                     version: self.core.version.to_string(),
                     label: self.core.label.clone(),
-                    href: self.href.clone(),
+                    href: self.href.to_string(),
                     hostname: self.hostname.clone(),
                     caps: BTreeMap::default(),
                     services,
@@ -99,7 +99,7 @@ impl Node {
                     id: self.core.id.to_string(),
                     version: self.core.version.to_string(),
                     label: self.core.label.clone(),
-                    href: self.href.clone(),
+                    href: self.href.to_string(),
                     hostname: self.hostname.clone(),
                     caps: BTreeMap::default(),
                     clocks: vec![serde_json::json!({"name": "clk0", "ref_type": "internal"})],
@@ -107,8 +107,8 @@ impl Node {
                     api: nmos_schema::is_04::v1_3_x::NodeApi {
                         versions: vec![V1_3.to_string()],
                         endpoints: vec![is_04::v1_3_x::NodeApiItemEndpoints {
-                            host: serde_json::json!("localhost".to_string()),
-                            port: 8088,
+                            host: serde_json::json!(self.href.host_str().unwrap()),
+                            port: self.href.port().unwrap() as i64,
                             protocol: "http".into(),
                             authorization: Some(false),
                         }],
