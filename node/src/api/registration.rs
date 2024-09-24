@@ -30,11 +30,10 @@ impl RegistrationApi {
             .error_for_status()?;
 
         if res.status() == StatusCode::OK {
-            let mut delete_url = url.clone();
-            delete_url
-                .path_segments_mut()
-                .unwrap()
-                .push(resource.registry_path().as_str());
+            let delete_url = url
+                .clone()
+                .join(format!("resource{}", resource.registry_path()).as_str())
+                .unwrap();
 
             warn!("Resource already present in API deleting: {}", delete_url);
 
@@ -60,11 +59,10 @@ impl RegistrationApi {
 
     pub async fn register_resources(
         client: &reqwest::Client,
-        model: Arc<Mutex<Model>>,
+        model: Arc<Model>,
         registry: Arc<Mutex<Option<NmosMdnsRegistry>>>,
         api_version: &APIVersion,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        let model = model.lock().await;
         let registry = registry.lock().await.clone().unwrap();
 
         let base = &registry

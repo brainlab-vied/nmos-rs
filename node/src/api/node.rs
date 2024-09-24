@@ -8,7 +8,6 @@ use nmos_model::resource::{DeviceJson, FlowJson, NodeJson, ReceiverJson, SenderJ
 use nmos_model::version::is_04::{V1_0, V1_3};
 use nmos_model::version::APIVersion;
 use nmos_model::Model;
-use tokio::sync::Mutex;
 use uuid::Uuid;
 
 use super::ServiceError;
@@ -38,10 +37,8 @@ fn parse_api_version(api: &str) -> Result<APIVersion, ServiceError> {
 
 pub async fn get_self(
     Path(api): Path<String>,
-    Extension(model): Extension<Arc<Mutex<Model>>>,
+    Extension(model): Extension<Arc<Model>>,
 ) -> Result<Json<NodeJson>, ServiceError> {
-    let model = model.lock().await;
-
     let api = parse_api_version(&api)?;
 
     let nodes = model.nodes().await;
@@ -58,10 +55,8 @@ pub async fn get_self(
 
 pub async fn get_devices(
     Path(api): Path<String>,
-    Extension(model): Extension<Arc<Mutex<Model>>>,
+    Extension(model): Extension<Arc<Model>>,
 ) -> Result<Json<Vec<DeviceJson>>, ServiceError> {
-    let model = model.lock().await;
-
     let api = parse_api_version(&api)?;
 
     let devices = model.devices().await;
@@ -76,10 +71,8 @@ pub async fn get_devices(
 
 pub async fn get_device(
     Path((api, id)): Path<(String, Uuid)>,
-    Extension(model): Extension<Arc<Mutex<Model>>>,
+    Extension(model): Extension<Arc<Model>>,
 ) -> Result<Json<DeviceJson>, ServiceError> {
-    let model = model.lock().await;
-
     let api = parse_api_version(&api)?;
 
     let devices = model.devices().await;
@@ -100,10 +93,8 @@ pub async fn get_device(
 
 pub async fn get_receivers(
     Path(api): Path<String>,
-    Extension(model): Extension<Arc<Mutex<Model>>>,
+    Extension(model): Extension<Arc<Model>>,
 ) -> Result<Json<Vec<ReceiverJson>>, ServiceError> {
-    let model = model.lock().await;
-
     let api = parse_api_version(&api)?;
 
     let receivers = model.receivers().await;
@@ -118,10 +109,8 @@ pub async fn get_receivers(
 
 pub async fn get_receiver(
     Path((api, id)): Path<(String, Uuid)>,
-    Extension(model): Extension<Arc<Mutex<Model>>>,
+    Extension(model): Extension<Arc<Model>>,
 ) -> Result<Json<ReceiverJson>, ServiceError> {
-    let model = model.lock().await;
-
     let api = parse_api_version(&api)?;
 
     let receivers = model.receivers().await;
@@ -141,10 +130,8 @@ pub async fn get_receiver(
 
 pub async fn get_senders(
     Path(api): Path<String>,
-    Extension(model): Extension<Arc<Mutex<Model>>>,
+    Extension(model): Extension<Arc<Model>>,
 ) -> Result<Json<Vec<SenderJson>>, ServiceError> {
-    let model = model.lock().await;
-
     let api = parse_api_version(&api)?;
 
     let senders = model.senders().await;
@@ -159,10 +146,8 @@ pub async fn get_senders(
 
 pub async fn get_sender(
     Path((api, id)): Path<(String, Uuid)>,
-    Extension(model): Extension<Arc<Mutex<Model>>>,
+    Extension(model): Extension<Arc<Model>>,
 ) -> Result<Json<SenderJson>, ServiceError> {
-    let model = model.lock().await;
-
     let api = parse_api_version(&api)?;
 
     let senders = model.senders().await;
@@ -182,10 +167,8 @@ pub async fn get_sender(
 
 pub async fn get_sources(
     Path(api): Path<String>,
-    Extension(model): Extension<Arc<Mutex<Model>>>,
+    Extension(model): Extension<Arc<Model>>,
 ) -> Result<Json<Vec<SourceJson>>, ServiceError> {
-    let model = model.lock().await;
-
     let api = parse_api_version(&api)?;
 
     let sources = model.sources().await;
@@ -200,10 +183,8 @@ pub async fn get_sources(
 
 pub async fn get_source(
     Path((api, id)): Path<(String, Uuid)>,
-    Extension(model): Extension<Arc<Mutex<Model>>>,
+    Extension(model): Extension<Arc<Model>>,
 ) -> Result<Json<SourceJson>, ServiceError> {
-    let model = model.lock().await;
-
     let api = parse_api_version(&api)?;
 
     let sources = model.sources().await;
@@ -223,10 +204,8 @@ pub async fn get_source(
 
 pub async fn get_flows(
     Path(api): Path<String>,
-    Extension(model): Extension<Arc<Mutex<Model>>>,
+    Extension(model): Extension<Arc<Model>>,
 ) -> Result<Json<Vec<FlowJson>>, ServiceError> {
-    let model = model.lock().await;
-
     let api = parse_api_version(&api)?;
 
     let flows = model.flows().await;
@@ -238,10 +217,8 @@ pub async fn get_flows(
 
 pub async fn get_flow(
     Path((api, id)): Path<(String, Uuid)>,
-    Extension(model): Extension<Arc<Mutex<Model>>>,
+    Extension(model): Extension<Arc<Model>>,
 ) -> Result<Json<FlowJson>, ServiceError> {
-    let model = model.lock().await;
-
     let api = parse_api_version(&api)?;
 
     let flows = model.flows().await;

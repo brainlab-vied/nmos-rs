@@ -16,7 +16,6 @@ use error::ServiceError;
 use futures::Future;
 use nmos_model::Model;
 use serde_json::json;
-use tokio::sync::Mutex;
 use tower::Service;
 
 use self::node::{
@@ -32,7 +31,7 @@ pub struct NodeApi {
 }
 
 impl NodeApi {
-    pub fn new(model: Arc<Mutex<Model>>) -> Self {
+    pub fn new(model: Arc<Model>) -> Self {
         let router = Router::new()
             .route(
                 "/",

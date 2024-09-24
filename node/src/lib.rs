@@ -2,7 +2,10 @@ use std::{collections::BinaryHeap, net::SocketAddr, sync::Arc, thread, time::Dur
 
 use axum::{http::Method, Server};
 use mdns::MdnsContext;
-use nmos_model::{resource::ResourceBundle, Model};
+use nmos_model::{
+    resource::{Registerable, ResourceBundle},
+    Model,
+};
 use reqwest::StatusCode;
 use tokio::{
     runtime::Runtime,
@@ -10,7 +13,7 @@ use tokio::{
 };
 use tower::{make::Shared, ServiceBuilder};
 use tower_http::cors::{self, CorsLayer};
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, warn};
 
 use nmos_model::version::is_04::V1_3;
 use nmos_model::version::APIVersion;
@@ -26,9 +29,10 @@ use mdns::{NmosMdnsConfig, NmosMdnsEvent, NmosMdnsRegistry};
 
 #[must_use]
 pub struct NodeBuilder {
-    model: Model,
+    model: Arc<Model>,
     address: SocketAddr,
     api_version: APIVersion,
+    event_channel: mpsc::UnboundedReceiver<ResourceUpdate>,
     heartbeat_interval: u64,
     registry_timeout: u64,
 }
@@ -36,9 +40,10 @@ pub struct NodeBuilder {
 impl NodeBuilder {
     pub fn new(model: Model) -> Self {
         Self {
-            model,
+            model: Arc::new(model),
             address: ([0, 0, 0, 0], 3000).into(),
             api_version: V1_3,
+            event_channel: mpsc::unbounded_channel::<ResourceUpdate>().1,
             heartbeat_interval: 5,
             registry_timeout: 5,
         }
@@ -46,9 +51,10 @@ impl NodeBuilder {
 
     pub fn from_resources(resource_bundle: ResourceBundle) -> Self {
         Self {
-            model: Model::from_resources(resource_bundle),
+            model: Arc::new(Model::from_resources(resource_bundle)),
             address: ([0, 0, 0, 0], 3000).into(),
             api_version: V1_3,
+            event_channel: mpsc::unbounded_channel::<ResourceUpdate>().1,
             heartbeat_interval: 5,
             registry_timeout: 5,
         }
@@ -74,31 +80,41 @@ impl NodeBuilder {
         self
     }
 
-    pub fn build(self) -> Node {
-        // Wrap model in Arc
-        let model = Arc::new(Mutex::new(self.model));
+    pub fn with_event_channel(mut self, channel: mpsc::UnboundedReceiver<ResourceUpdate>) -> Self {
+        self.event_channel = channel;
+        self
+    }
 
+    pub fn build(self) -> Node {
         // Make service
-        let service = NodeApi::new(model.clone());
+        let service = NodeApi::new(self.model.clone());
 
         Node {
-            model,
+            model: self.model,
             service,
             address: self.address,
             api_version: self.api_version,
             current_registry: Arc::new(Mutex::new(None)),
+            event_channel: self.event_channel,
             registry_timeout: self.registry_timeout,
             heartbeat_interval: self.heartbeat_interval,
         }
     }
 }
 
+pub enum ResourceUpdate {
+    Update(Box<dyn Registerable>),
+    Added(Box<dyn Registerable>),
+    Removed(Box<dyn Registerable>),
+}
+
 pub struct Node {
-    model: Arc<Mutex<Model>>,
+    model: Arc<Model>,
     service: NodeApi,
     address: SocketAddr,
     api_version: APIVersion,
     current_registry: Arc<Mutex<Option<NmosMdnsRegistry>>>,
+    event_channel: mpsc::UnboundedReceiver<ResourceUpdate>,
     heartbeat_interval: u64,
     registry_timeout: u64,
 }
@@ -113,11 +129,11 @@ impl Node {
     }
 
     #[must_use]
-    pub fn model(&self) -> Arc<Mutex<Model>> {
+    pub fn model(&self) -> Arc<Model> {
         self.model.clone()
     }
 
-    pub async fn start(self) -> error::Result<()> {
+    pub async fn start(mut self) -> error::Result<()> {
         info!("Starting nmos-rs node");
 
         // Channel for receiving MDNS events
@@ -233,8 +249,7 @@ impl Node {
 
                 // Get heartbeat endpoint from node id
                 let heartbeat_url = {
-                    let model = self.model.lock().await;
-                    let nodes = model.nodes().await;
+                    let nodes = self.model.nodes().await;
                     let node_id = *nodes.iter().next().unwrap().0;
                     let registry = self.current_registry.lock().await.clone().unwrap();
 
@@ -285,13 +300,54 @@ impl Node {
             }
         };
 
-        let update = async { loop {} };
+        let update = async {
+            // Create http client
+            let client = reqwest::Client::builder()
+                .timeout(Duration::from_secs(self.registry_timeout))
+                .build()
+                .unwrap();
+
+            while let Some(event) = self.event_channel.recv().await {
+                let res: Result<reqwest::Response, Box<dyn std::error::Error>> = match event {
+                    ResourceUpdate::Update(resource) => {
+                        if let Some(reg) = self.current_registry.lock().await.clone() {
+                            let url = reg
+                                .url
+                                .join(
+                                    format!("resource{}", resource.registry_path().as_str())
+                                        .as_str(),
+                                )
+                                .unwrap();
+                            info!("Updating resource: {}", url);
+                            client
+                                .put(url)
+                                .json(&resource.registration_request(&self.api_version))
+                                .send()
+                                .await
+                                .and_then(|res| res.error_for_status())
+                                .map_err(|err| err.into())
+                        } else {
+                            Err(Box::new(std::io::Error::new(
+                                std::io::ErrorKind::NotConnected,
+                                "No registry selected",
+                            )))
+                        }
+                    }
+                    ResourceUpdate::Added(_resource) => todo!(),
+                    ResourceUpdate::Removed(_resource) => todo!(),
+                };
+                match res {
+                    Ok(response) => debug!("{:?}", response),
+                    Err(err) => warn!("{}", err),
+                }
+            }
+        };
 
         tokio::select! {
             _ = mdns_receiver => {}
             _ = http_server => {}
             _ = registration => {}
-            _ = update =>{}
+            _ = update => {}
         };
 
         error!("Program shouldn't reach this part!");
