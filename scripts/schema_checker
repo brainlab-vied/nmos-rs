@@ -1,15 +1,25 @@
 #!/usr/bin/env python3
 
+"""
+Script to check JSON responses against NMOS specification.
+
+Usage: ./schema_checker --schema <schema_file_path> --json <json_string_or_file>
+--json: Can either be file path or raw JSON.
+--schema: file path to schema to be checked.
+          Make sure the entire schema folder is checked out so dependencies can be resolved
+
+Requirements: ../requirements.txt
+"""
+
 import argparse
 import json
 import os
-import jsonschema
 from jsonschema import Draft7Validator, RefResolver
 
 
 def load_schema(file_path):
     """Load a JSON schema file."""
-    with open(file_path) as f:
+    with open(file_path, 'r', encoding='utf-8') as f:
         return json.load(f)
 
 
@@ -71,11 +81,12 @@ def get_error_context(data, path):
 
 def read_json_from_file(file_path):
     """Read JSON data from a file."""
-    with open(file_path) as f:
+    with open(file_path, 'r', encoding='utf-8') as f:
         return json.load(f)
 
 
 def main():
+    """Main functions parses args and runs schema check."""
     parser = argparse.ArgumentParser(
         description="Validate a JSON string against a JSON Schema.",
         usage="%(prog)s --schema <schema_file_path> --json <json_string_or_file>"
@@ -91,6 +102,7 @@ def main():
         parser.print_help()
         exit(1)
 
+    # Load json schemas
     try:
         schemas, schema_dir = load_all_schemas(args.schema)
         schema = schemas['main']
@@ -102,15 +114,18 @@ def main():
             f"Error: Failed to parse schema file '{args.schema}'. Ensure it is valid JSON.")
         exit(1)
 
+    # Try to open file, if its not a file path, use the raw input as json instead
     try:
         if os.path.isfile(args.json):
             json_data = read_json_from_file(args.json)
         else:
             json_data = json.loads(args.json)
     except json.JSONDecodeError:
-        print("Error: Failed to parse JSON data. Ensure the JSON string or file contents are valid.")
+        print("Error: Failed to parse JSON data."
+              "Ensure the JSON string or file contents are valid.")
         exit(1)
 
+    # Validate json and print potential mismatches
     validate_json(json_data, schema, schema_dir)
 
 
