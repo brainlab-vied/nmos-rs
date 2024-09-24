@@ -92,16 +92,13 @@ impl NodeBuilder {
         // Make service
         let service = NodeApi::new(model.clone());
 
-        // Make registries
-        let registries = Arc::new(Mutex::new(BinaryHeap::new()));
-
         Node {
             _event_handler: self.event_handler,
             model,
             service,
-            registries,
             address: self.address,
             api_version: self.api_version,
+            current_registry: Arc::new(Mutex::new(None)),
             registry_timeout: self.registry_timeout,
             heartbeat_interval: self.heartbeat_interval,
         }
@@ -112,9 +109,9 @@ pub struct Node {
     _event_handler: Option<Arc<dyn EventHandler>>,
     model: Arc<Mutex<Model>>,
     service: NodeApi,
-    registries: Arc<Mutex<BinaryHeap<NmosMdnsRegistry>>>,
     address: SocketAddr,
     api_version: APIVersion,
+    current_registry: Arc<Mutex<Option<NmosMdnsRegistry>>>,
     heartbeat_interval: u64,
     registry_timeout: u64,
 }
@@ -139,6 +136,9 @@ impl Node {
         // Channel for receiving MDNS events
         let (tx, mut rx) = mpsc::unbounded_channel();
 
+        // Keep discovered registries in a priority queue
+        let registries = Arc::new(Mutex::new(BinaryHeap::new()));
+
         // MDNS must run on its own thread
         // Events are sent back to the Tokio runtime
         thread::spawn(move || {
@@ -160,7 +160,7 @@ impl Node {
 
         // Receive MDNS events in "main thread"
         let mdns_receiver = async {
-            let registries = self.registries.clone();
+            let registries = registries.clone();
 
             while let Some(event) = rx.recv().await {
                 if let NmosMdnsEvent::Discovery(_, Ok(discovery)) = event {
@@ -206,36 +206,41 @@ impl Node {
                 // Wait for registry discovery
                 tokio::time::sleep(Duration::from_secs(self.heartbeat_interval)).await;
 
-                // Try and get highest priority registry
-                let registry = {
-                    let mut registries = self.registries.lock().await;
-                    match registries.pop() {
-                        Some(r) => {
-                            if r.api_ver.contains(&self.api_version) {
-                                r
-                            } else {
-                                continue;
-                            }
-                        }
-                        None => continue,
-                    }
-                };
-
-                info!("selecting registry {}", registry.url);
-
-                // Attempt to register
-                match RegistrationApi::register_resources(
-                    &client,
-                    self.model.clone(),
-                    &registry,
-                    &self.api_version,
-                )
-                .await
                 {
-                    Ok(_) => info!("Registration successful"),
-                    Err(err) => {
-                        error!("Failed to register with registry: {}", err);
-                        continue;
+                    let mut registry = self.current_registry.lock().await;
+
+                    // Try and get highest priority registry
+                    *registry = {
+                        let mut registries = registries.lock().await;
+                        match registries.pop() {
+                            Some(r) => {
+                                if r.api_ver.contains(&self.api_version) {
+                                    info!("selecting registry {}", r.url);
+                                    Some(r)
+                                } else {
+                                    continue;
+                                }
+                            }
+                            None => continue,
+                        }
+                    };
+                }
+
+                {
+                    // Attempt to register
+                    match RegistrationApi::register_resources(
+                        &client,
+                        self.model.clone(),
+                        self.current_registry.clone(),
+                        &self.api_version,
+                    )
+                    .await
+                    {
+                        Ok(_) => info!("Registration successful"),
+                        Err(err) => {
+                            error!("Failed to register with registry: {}", err);
+                            continue;
+                        }
                     }
                 }
 
@@ -244,6 +249,7 @@ impl Node {
                     let model = self.model.lock().await;
                     let nodes = model.nodes().await;
                     let node_id = *nodes.iter().next().unwrap().0;
+                    let registry = self.current_registry.lock().await.clone().unwrap();
 
                     let mut base = registry
                         .url
@@ -265,7 +271,7 @@ impl Node {
                                     match RegistrationApi::register_resources(
                                         &client,
                                         self.model.clone(),
-                                        &registry,
+                                        self.current_registry.clone(),
                                         &self.api_version,
                                     )
                                     .await

@@ -19,7 +19,7 @@ use zeroconf::{
 
 pub struct NmosMdnsConfig {}
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Clone)]
 pub struct NmosMdnsRegistry {
     pub api_proto: String,
     pub api_ver: Vec<APIVersion>,

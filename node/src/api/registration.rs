@@ -61,10 +61,11 @@ impl RegistrationApi {
     pub async fn register_resources(
         client: &reqwest::Client,
         model: Arc<Mutex<Model>>,
-        registry: &NmosMdnsRegistry,
+        registry: Arc<Mutex<Option<NmosMdnsRegistry>>>,
         api_version: &APIVersion,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let model = model.lock().await;
+        let registry = registry.lock().await.clone().unwrap();
 
         let base = &registry
             .url
