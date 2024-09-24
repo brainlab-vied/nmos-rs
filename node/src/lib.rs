@@ -1,7 +1,6 @@
 use std::{collections::BinaryHeap, net::SocketAddr, sync::Arc, thread, time::Duration};
 
 use axum::{http::Method, Server};
-pub use event_handler::EventHandler;
 use mdns::MdnsContext;
 use nmos_model::{resource::ResourceBundle, Model};
 use reqwest::StatusCode;
@@ -18,10 +17,8 @@ use nmos_model::version::APIVersion;
 
 mod api;
 mod error;
-mod event_handler;
 mod mdns;
 
-pub use async_trait::async_trait;
 pub use error::Error as NmosError;
 
 use api::{NodeApi, RegistrationApi};
@@ -30,7 +27,6 @@ use mdns::{NmosMdnsConfig, NmosMdnsEvent, NmosMdnsRegistry};
 #[must_use]
 pub struct NodeBuilder {
     model: Model,
-    event_handler: Option<Arc<dyn EventHandler>>,
     address: SocketAddr,
     api_version: APIVersion,
     heartbeat_interval: u64,
@@ -41,7 +37,6 @@ impl NodeBuilder {
     pub fn new(model: Model) -> Self {
         Self {
             model,
-            event_handler: None,
             address: ([0, 0, 0, 0], 3000).into(),
             api_version: V1_3,
             heartbeat_interval: 5,
@@ -52,17 +47,11 @@ impl NodeBuilder {
     pub fn from_resources(resource_bundle: ResourceBundle) -> Self {
         Self {
             model: Model::from_resources(resource_bundle),
-            event_handler: None,
             address: ([0, 0, 0, 0], 3000).into(),
             api_version: V1_3,
             heartbeat_interval: 5,
             registry_timeout: 5,
         }
-    }
-
-    pub fn event_handler<H: EventHandler + 'static>(mut self, event_handler: H) -> Self {
-        self.event_handler = Some(Arc::new(event_handler));
-        self
     }
 
     pub fn with_addr(mut self, address: SocketAddr) -> Self {
@@ -93,7 +82,6 @@ impl NodeBuilder {
         let service = NodeApi::new(model.clone());
 
         Node {
-            _event_handler: self.event_handler,
             model,
             service,
             address: self.address,
@@ -106,7 +94,6 @@ impl NodeBuilder {
 }
 
 pub struct Node {
-    _event_handler: Option<Arc<dyn EventHandler>>,
     model: Arc<Mutex<Model>>,
     service: NodeApi,
     address: SocketAddr,
@@ -298,10 +285,13 @@ impl Node {
             }
         };
 
+        let update = async { loop {} };
+
         tokio::select! {
             _ = mdns_receiver => {}
             _ = http_server => {}
             _ = registration => {}
+            _ = update =>{}
         };
 
         error!("Program shouldn't reach this part!");

@@ -9,7 +9,6 @@ license = "Apache-2.0"
 rust-version = "1.56"
 
 [dependencies]
-async-trait = "0.1"
 axum = { version = "0.5", default-features = false, features = ["http1", "json", "original-uri", "tower-log"] }
 futures = "0.3"
 nmos-model = { path = "../model" }
