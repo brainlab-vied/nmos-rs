@@ -29,7 +29,7 @@ pub struct NmosMdnsRegistry {
 }
 
 impl NmosMdnsRegistry {
-    pub fn parse(discovery: &ServiceDiscovery) -> Option<Self> {
+    pub fn parse(discovery: &ServiceDiscovery, api_version: &APIVersion) -> Option<Self> {
         debug!("{:?}", discovery);
 
         // TXT record required
@@ -72,6 +72,10 @@ impl NmosMdnsRegistry {
             // Parse api_ver
             let api_ver: Vec<APIVersion> =
                 api_ver.split(',').flat_map(APIVersion::from_str).collect();
+
+            if !api_ver.contains(api_version) {
+                return None;
+            }
 
             // Parse api_auth
             let api_auth = match api_auth.parse::<bool>() {
