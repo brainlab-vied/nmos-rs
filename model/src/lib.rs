@@ -152,4 +152,62 @@ impl Model {
 
         Some(())
     }
+
+    pub async fn insert_sender(&self, sender: Sender) -> Option<()> {
+        // Check device id and flow id in model
+        let devices = self.devices.read().await;
+        let flows = self.flows.read().await;
+        if !devices.contains_key(&sender.device_id) || !flows.contains_key(&sender.flow_id) {
+            return None;
+        }
+
+        let mut senders = self.senders.write().await;
+        senders.insert(sender.core.id, sender);
+
+        Some(())
+    }
+
+    pub async fn insert_flow(&self, flow: Flow) -> Option<()> {
+        // Check device id and source id in model
+        let devices = self.devices.read().await;
+        let sources = self.sources.read().await;
+        if !devices.contains_key(&flow.device_id) || !sources.contains_key(&flow.source_id) {
+            return None;
+        }
+
+        let mut flows = self.flows.write().await;
+        flows.insert(flow.core.id, flow);
+
+        Some(())
+    }
+
+    pub async fn remove_node(&self, id: &Uuid) -> Option<()> {
+        let mut nodes = self.nodes.write().await;
+        nodes.remove(id).map(|_| ())
+    }
+
+    pub async fn remove_device(&self, id: &Uuid) -> Option<()> {
+        let mut devices = self.devices.write().await;
+        devices.remove(id).map(|_| ())
+    }
+
+    pub async fn remove_source(&self, id: &Uuid) -> Option<()> {
+        let mut sources = self.sources.write().await;
+        sources.remove(id).map(|_| ())
+    }
+
+    pub async fn remove_sender(&self, id: &Uuid) -> Option<()> {
+        let mut senders = self.senders.write().await;
+        senders.remove(id).map(|_| ())
+    }
+
+    pub async fn remove_receiver(&self, id: &Uuid) -> Option<()> {
+        let mut receivers = self.receivers.write().await;
+        receivers.remove(id).map(|_| ())
+    }
+
+    pub async fn remove_flow(&self, id: &Uuid) -> Option<()> {
+        let mut flows = self.flows.write().await;
+        flows.remove(id).map(|_| ())
+    }
 }
