@@ -167,7 +167,7 @@ impl Node {
 
             while let Some(event) = rx.recv().await {
                 if let NmosMdnsEvent::Discovery(_, Ok(discovery)) = event {
-                    if let Some(registry) = NmosMdnsRegistry::parse(&discovery) {
+                    if let Some(registry) = NmosMdnsRegistry::parse(&discovery, &self.api_version) {
                         let mut registries = registries.lock().await;
                         debug!(
                             "Discovered registry url: {} version: {:?} priority: {}",
@@ -253,13 +253,12 @@ impl Node {
                     let node_id = *nodes.iter().next().unwrap().0;
                     let registry = self.current_registry.lock().await.clone().unwrap();
 
-                    let mut base = registry
+                    registry
                         .url
                         .join(&format!("{}/", self.api_version)) // Ensure it ends with a '/'
-                        .unwrap();
-
-                    base = base.join(&format!("health/nodes/{}", node_id)).unwrap();
-                    base
+                        .unwrap()
+                        .join(&format!("health/nodes/{}", node_id))
+                        .unwrap()
                 };
 
                 let mut first_attempt = true;
@@ -343,6 +342,8 @@ impl Node {
                         Ok(response) => debug!("{:?}", response),
                         Err(err) => warn!("{}", err),
                     }
+                } else {
+                    warn!("No registry available!");
                 }
             }
         };
