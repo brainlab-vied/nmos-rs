@@ -14,47 +14,62 @@ use crate::mdns::NmosMdnsRegistry;
 pub struct RegistrationApi;
 
 impl RegistrationApi {
-    async fn register_resource(
+    pub async fn post_resource(
         client: &reqwest::Client,
         url: &reqwest::Url,
-        resource: &impl resource::Registerable,
+        resource: &dyn resource::Registerable,
         api_version: &APIVersion,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    ) -> Result<reqwest::Response, Box<dyn std::error::Error>> {
         let request = resource.registration_request(api_version);
 
-        let res = client
+        Ok(client
             .post(url.clone())
             .json(&request)
             .send()
             .await?
-            .error_for_status()?;
+            .error_for_status()?)
+    }
+
+    pub async fn delete_resource(
+        client: &reqwest::Client,
+        url: &reqwest::Url,
+        resource: &dyn resource::Registerable,
+    ) -> Result<reqwest::Response, Box<dyn std::error::Error>> {
+        let delete_url = url
+            .clone()
+            .join(format!("resource/{}", resource.registry_path()).as_str())
+            .unwrap();
+
+        Ok(client.delete(delete_url).send().await?.error_for_status()?)
+    }
+
+    pub async fn register_resource(
+        client: &reqwest::Client,
+        url: &reqwest::Url,
+        resource: &dyn resource::Registerable,
+        api_version: &APIVersion,
+    ) -> Result<reqwest::Response, Box<dyn std::error::Error>> {
+        let res = Self::post_resource(client, url, resource, api_version).await?;
 
         if res.status() == StatusCode::OK {
-            let delete_url = url
-                .clone()
-                .join(format!("resource{}", resource.registry_path()).as_str())
-                .unwrap();
+            warn!(
+                "Resource already present in API deleting: {}",
+                resource.registry_path()
+            );
 
-            warn!("Resource already present in API deleting: {}", delete_url);
-
-            client.delete(delete_url).send().await?.error_for_status()?;
-
-            let res = client
-                .post(url.clone())
-                .json(&request)
-                .send()
-                .await?
-                .error_for_status()?;
+            let res = Self::delete_resource(client, url, resource).await?;
 
             if res.status() == StatusCode::OK {
                 return Err(Box::new(std::io::Error::new(
                     std::io::ErrorKind::Other,
                     "Failed to register resource after deleting and re-registering",
                 )));
+            } else {
+                return Ok(res);
             }
         }
 
-        Ok(())
+        Ok(res)
     }
 
     pub async fn register_resources(

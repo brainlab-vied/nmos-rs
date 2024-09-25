@@ -308,37 +308,41 @@ impl Node {
                 .unwrap();
 
             while let Some(event) = self.event_channel.recv().await {
-                let res: Result<reqwest::Response, Box<dyn std::error::Error>> = match event {
-                    ResourceUpdate::Update(resource) => {
-                        if let Some(reg) = self.current_registry.lock().await.clone() {
-                            let url = reg
-                                .url
-                                .join(
-                                    format!("resource{}", resource.registry_path().as_str())
-                                        .as_str(),
-                                )
-                                .unwrap();
-                            info!("Updating resource: {}", url);
-                            client
-                                .put(url)
-                                .json(&resource.registration_request(&self.api_version))
-                                .send()
-                                .await
-                                .and_then(|res| res.error_for_status())
-                                .map_err(|err| err.into())
-                        } else {
-                            Err(Box::new(std::io::Error::new(
-                                std::io::ErrorKind::NotConnected,
-                                "No registry selected",
-                            )))
+                if let Some(reg) = self.current_registry.lock().await.clone() {
+                    let base = &reg
+                        .url
+                        .join(format!("{}/", self.api_version.to_string()).as_str())
+                        .unwrap();
+
+                    let url = &base.join("resource").unwrap();
+
+                    let res: Result<reqwest::Response, Box<dyn std::error::Error>> = match event {
+                        ResourceUpdate::Update(resource) => {
+                            RegistrationApi::post_resource(
+                                &client,
+                                &url,
+                                resource.as_ref(),
+                                &self.api_version,
+                            )
+                            .await
                         }
+                        ResourceUpdate::Added(resource) => {
+                            RegistrationApi::register_resource(
+                                &client,
+                                &url,
+                                resource.as_ref(),
+                                &self.api_version,
+                            )
+                            .await
+                        }
+                        ResourceUpdate::Removed(resource) => {
+                            RegistrationApi::delete_resource(&client, &url, resource.as_ref()).await
+                        }
+                    };
+                    match res {
+                        Ok(response) => debug!("{:?}", response),
+                        Err(err) => warn!("{}", err),
                     }
-                    ResourceUpdate::Added(_resource) => todo!(),
-                    ResourceUpdate::Removed(_resource) => todo!(),
-                };
-                match res {
-                    Ok(response) => debug!("{:?}", response),
-                    Err(err) => warn!("{}", err),
                 }
             }
         };
