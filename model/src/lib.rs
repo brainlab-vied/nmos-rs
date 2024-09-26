@@ -5,8 +5,23 @@ pub mod version;
 use std::collections::HashMap;
 
 use resource::{Device, Flow, Node, Receiver, ResourceBundle, Sender, Source};
+use tai::TaiTime;
 use tokio::sync::{RwLock, RwLockReadGuard};
 use uuid::Uuid;
+
+macro_rules! modify_resource {
+    ($hashmap:expr, $resource:expr) => {
+        if !$hashmap.contains_key(&$resource.core.id) {
+            None
+        } else {
+            $resource.core.version = TaiTime::now();
+
+            $hashmap.insert($resource.core.id, $resource.clone());
+
+            Some(())
+        }
+    };
+}
 
 #[derive(Debug, Default)]
 pub struct Model {
@@ -209,5 +224,29 @@ impl Model {
     pub async fn remove_flow(&self, id: &Uuid) -> Option<()> {
         let mut flows = self.flows.write().await;
         flows.remove(id).map(|_| ())
+    }
+
+    pub async fn update_node(&self, node: &mut Node) -> Option<()> {
+        modify_resource!(self.nodes.write().await, node)
+    }
+
+    pub async fn update_device(&self, device: &mut Device) -> Option<()> {
+        modify_resource!(self.devices.write().await, device)
+    }
+
+    pub async fn update_source(&self, source: &mut Source) -> Option<()> {
+        modify_resource!(self.sources.write().await, source)
+    }
+
+    pub async fn update_sender(&self, sender: &mut Sender) -> Option<()> {
+        modify_resource!(self.senders.write().await, sender)
+    }
+
+    pub async fn update_receiver(&self, receiver: &mut Receiver) -> Option<()> {
+        modify_resource!(self.receivers.write().await, receiver)
+    }
+
+    pub async fn update_flow(&self, flow: &mut Flow) -> Option<()> {
+        modify_resource!(self.flows.write().await, flow)
     }
 }
