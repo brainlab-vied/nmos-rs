@@ -18,7 +18,7 @@ pub mod receiver;
 pub mod sender;
 pub mod source;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Format {
     Video,
     Audio,
