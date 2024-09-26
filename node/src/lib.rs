@@ -207,7 +207,7 @@ impl Node {
 
             loop {
                 // Wait for registry discovery
-                tokio::time::sleep(Duration::from_secs(self.heartbeat_interval)).await;
+                tokio::time::sleep(Duration::from_secs(5)).await;
 
                 {
                     let mut registry = self.current_registry.lock().await;
@@ -215,35 +215,28 @@ impl Node {
                     // Try and get highest priority registry
                     *registry = {
                         let mut registries = registries.lock().await;
-                        match registries.pop() {
-                            Some(r) => {
-                                if r.api_ver.contains(&self.api_version) {
-                                    info!("selecting registry {}", r.url);
-                                    Some(r)
-                                } else {
-                                    continue;
-                                }
-                            }
-                            None => continue,
-                        }
+                        registries.pop()
                     };
+
+                    // Don't register and heartbeat if no registry is available
+                    if registry.is_none() {
+                        continue;
+                    }
                 }
 
+                // Attempt to register
+                match RegistrationApi::register_resources(
+                    &client,
+                    self.model.clone(),
+                    self.current_registry.clone(),
+                    &self.api_version,
+                )
+                .await
                 {
-                    // Attempt to register
-                    match RegistrationApi::register_resources(
-                        &client,
-                        self.model.clone(),
-                        self.current_registry.clone(),
-                        &self.api_version,
-                    )
-                    .await
-                    {
-                        Ok(_) => info!("Registration successful"),
-                        Err(err) => {
-                            error!("Failed to register with registry: {}", err);
-                            continue;
-                        }
+                    Ok(_) => info!("Registration successful"),
+                    Err(err) => {
+                        error!("Failed to register with registry: {}", err);
+                        continue;
                     }
                 }
 
@@ -294,7 +287,7 @@ impl Node {
                             break;
                         }
                     }
-                    tokio::time::sleep(Duration::from_secs(5)).await;
+                    tokio::time::sleep(Duration::from_secs(self.heartbeat_interval)).await;
                 }
             }
         };
