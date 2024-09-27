@@ -1,4 +1,4 @@
-use std::vec;
+use std::{collections::BTreeMap, vec};
 
 use nmos_schema::is_04::{v1_0_x, v1_3_x};
 use serde::Serialize;
@@ -79,6 +79,7 @@ impl SenderBuilder {
             transport: self.transport,
             device_id: self.device_id,
             manifest_href: self.manifest_href.unwrap_or_default(),
+            caps: None,
         }
     }
 }
@@ -90,6 +91,7 @@ pub struct Sender {
     pub transport: Transport,
     pub device_id: Uuid,
     pub manifest_href: String,
+    pub caps: Option<BTreeMap<String, serde_json::Value>>,
 }
 
 impl Sender {
@@ -151,8 +153,7 @@ impl Into<v1_3_x::Sender> for Sender {
     fn into(self) -> v1_3_x::Sender {
         v1_3_x::Sender {
             interface_bindings: vec![],
-            // TODO: implement caps
-            caps: None,
+            caps: self.caps,
             id: self.core.id.to_string(),
             version: self.core.version.to_string(),
             label: self.core.label.clone(),
