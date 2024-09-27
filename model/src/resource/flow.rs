@@ -8,7 +8,7 @@ use crate::{
     version::{is_04::V1_0, is_04::V1_3, APIVersion},
 };
 
-use super::{Device, Registerable, ResourceCore, ResourceCoreBuilder};
+use super::{capabilities::GrainRate, Device, Registerable, ResourceCore, ResourceCoreBuilder};
 
 macro_rules! registration_request {
     ($value:expr, $version:ident) => {
@@ -28,6 +28,12 @@ pub struct FlowBuilder {
     source_id: Uuid,
     device_id: Uuid,
     parents: Vec<Uuid>,
+    pub frame_height: i64,
+    pub frame_width: i64,
+    pub media_type: String,
+    pub colorspace: String,
+    pub grain_rate: Option<GrainRate>,
+    pub sample_rate: Option<GrainRate>,
 }
 
 impl FlowBuilder {
@@ -38,11 +44,43 @@ impl FlowBuilder {
             source_id: source.core.id,
             device_id: device.core.id,
             parents: Vec::new(),
+            frame_height: 640,
+            frame_width: 480,
+            media_type: "".into(),
+            colorspace: "".into(),
+            grain_rate: None,
+            sample_rate: None,
         }
     }
 
-    pub fn description<S: Into<String>>(mut self, description: S) -> Self {
+    pub fn with_description<S: Into<String>>(mut self, description: S) -> Self {
         self.core = self.core.description(description);
+        self
+    }
+
+    pub fn with_media_type(mut self, media_type: String) -> Self {
+        self.media_type = media_type;
+        self
+    }
+
+    pub fn with_colorspace(mut self, colorspace: String) -> Self {
+        self.colorspace = colorspace;
+        self
+    }
+
+    pub fn with_sample_rate(mut self, denominator: i64, numerator: i64) -> Self {
+        self.sample_rate = Some(GrainRate {
+            denominator: Some(denominator),
+            numerator,
+        });
+        self
+    }
+
+    pub fn with_grain_rate(mut self, denominator: i64, numerator: i64) -> Self {
+        self.grain_rate = Some(GrainRate {
+            denominator: Some(denominator),
+            numerator,
+        });
         self
     }
 
@@ -63,6 +101,12 @@ impl FlowBuilder {
             source_id: self.source_id,
             device_id: self.device_id,
             parents: self.parents,
+            frame_height: self.frame_height,
+            frame_width: self.frame_width,
+            media_type: self.media_type,
+            colorspace: self.colorspace,
+            grain_rate: self.grain_rate,
+            sample_rate: self.sample_rate,
         }
     }
 }
@@ -74,6 +118,12 @@ pub struct Flow {
     pub source_id: Uuid,
     pub device_id: Uuid,
     pub parents: Vec<Uuid>,
+    pub frame_height: i64,
+    pub frame_width: i64,
+    pub media_type: String,
+    pub colorspace: String,
+    pub grain_rate: Option<GrainRate>,
+    pub sample_rate: Option<GrainRate>,
 }
 
 impl Flow {
@@ -139,6 +189,7 @@ impl Into<v1_3_x::Flow> for Flow {
         let tags = self.core.tags_json();
         let source_id = self.source_id.to_string();
         let device_id = self.device_id.to_string();
+
         match self.format {
             Format::Video => {
                 json!(v1_3_x::FlowVideoCoded {
@@ -151,19 +202,20 @@ impl Into<v1_3_x::Flow> for Flow {
                     source_id,
                     parents,
                     device_id,
-                    grain_rate: None,
-                    colorspace: "RGB".into(),
-                    frame_height: 640,
-                    frame_width: 480,
+                    media_type: self.media_type.clone().into(),
+                    grain_rate: self.grain_rate.map(|grain_rate| grain_rate.into()),
+                    colorspace: self.colorspace.into(),
+                    frame_height: self.frame_height,
+                    frame_width: self.frame_width,
+                    // Not implemented
                     interlace_mode: None,
                     transfer_characteristic: None,
-                    media_type: "video/h264".into()
                 })
             }
             Format::Audio => {
-                let sample_rate = nmos_schema::is_04::v1_3_x::FlowAudioCodedSampleRate {
-                    numerator: 44000,
+                let default_sample_rate = GrainRate {
                     denominator: None,
+                    numerator: 44000,
                 };
                 json!(v1_3_x::FlowAudioCoded {
                     id,
@@ -175,9 +227,9 @@ impl Into<v1_3_x::Flow> for Flow {
                     source_id,
                     parents,
                     device_id,
-                    sample_rate,
-                    media_type: "audio/ogg".to_string(),
-                    grain_rate: None,
+                    media_type: self.media_type.clone(),
+                    sample_rate: self.sample_rate.unwrap_or(default_sample_rate).into(),
+                    grain_rate: self.grain_rate.map(|grain_rate| grain_rate.into()),
                 })
             }
             Format::Data => {

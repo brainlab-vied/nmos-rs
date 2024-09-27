@@ -11,6 +11,7 @@ pub use source::{Source, SourceBuilder, SourceJson};
 
 use crate::{tai::TaiTime, version::APIVersion};
 
+pub mod capabilities;
 pub mod device;
 pub mod flow;
 pub mod node;
