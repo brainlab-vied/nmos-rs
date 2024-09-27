@@ -20,7 +20,7 @@ use nmos_model::version::APIVersion;
 
 mod api;
 mod error;
-mod mdns;
+pub mod mdns;
 
 pub use error::Error as NmosError;
 
@@ -35,6 +35,7 @@ pub struct NodeBuilder {
     event_channel: mpsc::UnboundedReceiver<ResourceUpdate>,
     heartbeat_interval: u64,
     registry_timeout: u64,
+    default_registry: Option<NmosMdnsRegistry>,
 }
 
 impl NodeBuilder {
@@ -46,6 +47,7 @@ impl NodeBuilder {
             event_channel: mpsc::unbounded_channel::<ResourceUpdate>().1,
             heartbeat_interval: 5,
             registry_timeout: 5,
+            default_registry: None,
         }
     }
 
@@ -57,6 +59,7 @@ impl NodeBuilder {
             event_channel: mpsc::unbounded_channel::<ResourceUpdate>().1,
             heartbeat_interval: 5,
             registry_timeout: 5,
+            default_registry: None,
         }
     }
 
@@ -85,6 +88,11 @@ impl NodeBuilder {
         self
     }
 
+    pub fn with_default_registry(mut self, registry: Option<NmosMdnsRegistry>) -> Self {
+        self.default_registry = registry;
+        self
+    }
+
     pub fn build(self) -> Node {
         // Make service
         let service = NodeApi::new(self.model.clone());
@@ -94,7 +102,7 @@ impl NodeBuilder {
             service,
             address: self.address,
             api_version: self.api_version,
-            current_registry: Arc::new(Mutex::new(None)),
+            current_registry: Arc::new(Mutex::new(self.default_registry)),
             event_channel: self.event_channel,
             registry_timeout: self.registry_timeout,
             heartbeat_interval: self.heartbeat_interval,
@@ -141,6 +149,11 @@ impl Node {
 
         // Keep discovered registries in a priority queue
         let registries = Arc::new(Mutex::new(BinaryHeap::new()));
+
+        // Insert default registry as first registry into priority queue if it exists
+        if let Some(reg) = self.current_registry.lock().await.clone() {
+            registries.lock().await.push(reg);
+        }
 
         // MDNS must run on its own thread
         // Events are sent back to the Tokio runtime
