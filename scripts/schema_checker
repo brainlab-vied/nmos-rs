@@ -50,7 +50,6 @@ def validate_json(json_data, schema, schema_dir):
 
     if not errors:
         print("JSON is valid!")
-        return
 
     for error in errors:
         # Print error details
