@@ -75,8 +75,8 @@ impl Node {
     #[must_use]
     pub fn to_json(&self, api: &APIVersion) -> NodeJson {
         match *api {
-            V1_0 => NodeJson::V1_0((*self).clone().into()),
-            V1_3 => NodeJson::V1_3((*self).clone().into()),
+            V1_0 => NodeJson::V1_0(self.clone().into()),
+            V1_3 => NodeJson::V1_3(self.clone().into()),
             _ => panic!("Unsupported API"),
         }
     }

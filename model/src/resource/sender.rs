@@ -107,8 +107,8 @@ impl Sender {
     #[must_use]
     pub fn to_json(&self, api: &APIVersion) -> SenderJson {
         match *api {
-            V1_0 => SenderJson::V1_0((*self).clone().into()),
-            V1_3 => SenderJson::V1_3((*self).clone().into()),
+            V1_0 => SenderJson::V1_0(self.clone().into()),
+            V1_3 => SenderJson::V1_3(self.clone().into()),
             _ => panic!("Unsupported API"),
         }
     }

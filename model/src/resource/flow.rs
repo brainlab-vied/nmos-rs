@@ -134,8 +134,8 @@ impl Flow {
     #[must_use]
     pub fn to_json(&self, api: &APIVersion) -> FlowJson {
         match *api {
-            V1_0 => FlowJson::V1_0((*self).clone().into()),
-            V1_3 => FlowJson::V1_3((*self).clone().into()),
+            V1_0 => FlowJson::V1_0(self.clone().into()),
+            V1_3 => FlowJson::V1_3(self.clone().into()),
             _ => panic!("Unsupported API"),
         }
     }

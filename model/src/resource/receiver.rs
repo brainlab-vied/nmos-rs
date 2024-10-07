@@ -96,8 +96,8 @@ impl Receiver {
     #[must_use]
     pub fn to_json(&self, api: &APIVersion) -> ReceiverJson {
         match *api {
-            V1_0 => ReceiverJson::V1_0((*self).clone().into()),
-            V1_3 => ReceiverJson::V1_3((*self).clone().into()),
+            V1_0 => ReceiverJson::V1_0(self.clone().into()),
+            V1_3 => ReceiverJson::V1_3(self.clone().into()),
             _ => panic!("Unsupported API"),
         }
     }
