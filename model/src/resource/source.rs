@@ -32,7 +32,7 @@ pub struct SourceBuilder {
 }
 
 impl SourceBuilder {
-    pub fn new<S: Into<String>>(label: S, device: &Device, format: Format) -> Self {
+    pub fn new(label: impl Into<String>, device: &Device, format: Format) -> Self {
         SourceBuilder {
             core: ResourceCoreBuilder::new(label),
             format,
@@ -66,7 +66,7 @@ pub struct Source {
 }
 
 impl Source {
-    pub fn builder<S: Into<String>>(label: S, device: &Device, format: Format) -> SourceBuilder {
+    pub fn builder(label: impl Into<String>, device: &Device, format: Format) -> SourceBuilder {
         SourceBuilder::new(label, device, format)
     }
 

@@ -82,7 +82,7 @@ impl RegistrationApi {
 
         let base = &registry
             .url
-            .join(format!("{}/", api_version.to_string()).as_str())
+            .join(format!("{}/", api_version).as_str())
             .unwrap();
 
         let resource_url = &base.join("resource").unwrap();
@@ -91,27 +91,27 @@ impl RegistrationApi {
 
         // Register resources in order
         debug!("Registering nodes...");
-        for (_, node) in model.nodes().await.iter() {
+        for node in model.nodes().await.values() {
             Self::register_resource(client, resource_url, node, api_version).await?;
         }
         debug!("Registering devices...");
-        for (_, device) in model.devices().await.iter() {
+        for device in model.devices().await.values() {
             Self::register_resource(client, resource_url, device, api_version).await?;
         }
         debug!("Registering sources...");
-        for (_, source) in model.sources().await.iter() {
+        for source in model.sources().await.values() {
             Self::register_resource(client, resource_url, source, api_version).await?;
         }
         debug!("Registering flows...");
-        for (_, flow) in model.flows().await.iter() {
+        for flow in model.flows().await.values() {
             Self::register_resource(client, resource_url, flow, api_version).await?;
         }
         debug!("Registering senders...");
-        for (_, sender) in model.senders().await.iter() {
+        for sender in model.senders().await.values() {
             Self::register_resource(client, resource_url, sender, api_version).await?;
         }
         debug!("Registering receivers...");
-        for (_, receiver) in model.receivers().await.iter() {
+        for receiver in model.receivers().await.values() {
             Self::register_resource(client, resource_url, receiver, api_version).await?;
         }
 

@@ -37,7 +37,7 @@ pub struct FlowBuilder {
 }
 
 impl FlowBuilder {
-    pub fn new<S: Into<String>>(label: S, source: &Source, device: &Device) -> Self {
+    pub fn new(label: impl Into<String>, source: &Source, device: &Device) -> Self {
         FlowBuilder {
             core: ResourceCoreBuilder::new(label),
             format: source.format,
@@ -46,14 +46,14 @@ impl FlowBuilder {
             parents: Vec::new(),
             frame_height: 640,
             frame_width: 480,
-            media_type: "".into(),
-            colorspace: "".into(),
+            media_type: String::default(),
+            colorspace: String::default(),
             grain_rate: None,
             sample_rate: None,
         }
     }
 
-    pub fn with_description<S: Into<String>>(mut self, description: S) -> Self {
+    pub fn with_description(mut self, description: impl Into<String>) -> Self {
         self.core = self.core.description(description);
         self
     }
@@ -127,7 +127,7 @@ pub struct Flow {
 }
 
 impl Flow {
-    pub fn builder<S: Into<String>>(label: S, source: &Source, device: &Device) -> FlowBuilder {
+    pub fn builder(label: impl Into<String>, source: &Source, device: &Device) -> FlowBuilder {
         FlowBuilder::new(label, source, device)
     }
 

@@ -34,7 +34,7 @@ pub struct NodeBuilder {
 }
 
 impl NodeBuilder {
-    pub fn new<S: Into<String>>(label: S, href: S) -> Self {
+    pub fn new(label: impl Into<String>, href: impl Into<String>) -> Self {
         NodeBuilder {
             core: ResourceCoreBuilder::new(label),
             href: href.into(),
@@ -68,7 +68,7 @@ pub struct Node {
 }
 
 impl Node {
-    pub fn builder<S: Into<String>>(label: S, href: S) -> NodeBuilder {
+    pub fn builder(label: impl Into<String>, href: impl Into<String>) -> NodeBuilder {
         NodeBuilder::new(label, href)
     }
 

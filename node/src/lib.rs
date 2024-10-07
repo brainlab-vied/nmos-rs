@@ -226,10 +226,7 @@ impl Node {
                     let mut registry = self.current_registry.lock().await;
 
                     // Try and get highest priority registry
-                    *registry = {
-                        let mut registries = registries.lock().await;
-                        registries.pop()
-                    };
+                    *registry = registries.lock().await.pop();
 
                     // Don't register and heartbeat if no registry is available
                     if registry.is_none() {
@@ -261,9 +258,7 @@ impl Node {
 
                     registry
                         .url
-                        .join(&format!("{}/", self.api_version)) // Ensure it ends with a '/'
-                        .unwrap()
-                        .join(&format!("health/nodes/{}", node_id))
+                        .join(&format!("{}/health/nodes/{}", self.api_version, node_id))
                         .unwrap()
                 };
 
@@ -316,12 +311,12 @@ impl Node {
                 if let Some(reg) = self.current_registry.lock().await.clone() {
                     let base = &reg
                         .url
-                        .join(format!("{}/", self.api_version.to_string()).as_str())
+                        .join(format!("{}/", self.api_version).as_str())
                         .unwrap();
 
                     let url = &base.join("resource").unwrap();
 
-                    let res: Result<reqwest::Response, Box<dyn std::error::Error>> = match event {
+                    let res = match event {
                         ResourceUpdate::Update(resource) => {
                             RegistrationApi::post_resource(
                                 &client,

@@ -36,8 +36,8 @@ pub struct SenderBuilder {
 }
 
 impl SenderBuilder {
-    pub fn new<S: Into<String>>(
-        label: S,
+    pub fn new(
+        label: impl Into<String>,
         device: &Device,
         flow: &Flow,
         transport: Transport,
@@ -95,8 +95,8 @@ pub struct Sender {
 }
 
 impl Sender {
-    pub fn builder<S: Into<String>>(
-        label: S,
+    pub fn builder(
+        label: impl Into<String>,
         device: &Device,
         flow: &Flow,
         transport: Transport,

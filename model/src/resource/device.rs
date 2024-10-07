@@ -46,7 +46,7 @@ pub struct DeviceBuilder {
 }
 
 impl DeviceBuilder {
-    pub fn new<S: Into<String>>(label: S, node: &Node, device_type: DeviceType) -> Self {
+    pub fn new(label: impl Into<String>, node: &Node, device_type: DeviceType) -> Self {
         DeviceBuilder {
             core: ResourceCoreBuilder::new(label),
             type_: device_type,
@@ -76,8 +76,8 @@ pub struct Device {
 }
 
 impl Device {
-    pub fn builder<S: Into<String>>(
-        label: S,
+    pub fn builder(
+        label: impl Into<String>,
         node: &Node,
         device_type: DeviceType,
     ) -> DeviceBuilder {
@@ -140,11 +140,11 @@ impl Into<v1_3_x::Device> for Device {
             label: self.core.label.clone(),
             type_: v1_3_x::DeviceType::Variant0(self.type_.to_string().into()),
             node_id: self.node_id.to_string(),
+            tags: self.core.tags_json(),
+            description: self.core.description.clone(),
+            controls: Vec::default(),
             senders,
             receivers,
-            tags: self.core.tags_json(),
-            description: "".to_string(),
-            controls: vec![],
         }
     }
 }

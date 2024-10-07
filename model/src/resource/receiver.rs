@@ -33,8 +33,8 @@ pub struct ReceiverBuilder {
 }
 
 impl ReceiverBuilder {
-    pub fn new<S: Into<String>>(
-        label: S,
+    pub fn new(
+        label: impl Into<String>,
         device: &Device,
         format: Format,
         transport: Transport,
@@ -84,8 +84,8 @@ pub struct Receiver {
 }
 
 impl Receiver {
-    pub fn builder<S: Into<String>>(
-        label: S,
+    pub fn builder(
+        label: impl Into<String>,
         device: &Device,
         format: Format,
         transport: Transport,
