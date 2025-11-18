@@ -48,6 +48,11 @@ impl NodeBuilder {
         self
     }
 
+    pub fn with_description(mut self, description: &str) -> Self {
+        self.core = self.core.description(description);
+        self
+    }
+
     pub fn with_tag<S, V>(mut self, key: S, values: V) -> Self
     where
         S: Into<String>,

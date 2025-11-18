@@ -46,6 +46,11 @@ impl SourceBuilder {
         self
     }
 
+    pub fn with_parent(mut self, parent_id: Uuid) -> Self {
+        self.parents.push(parent_id);
+        self
+    }
+
     pub fn with_tag<S, V>(mut self, key: S, values: V) -> Self
     where
         S: Into<String>,
