@@ -41,8 +41,22 @@ impl SourceBuilder {
         }
     }
 
-    pub fn description<S: Into<String>>(mut self, description: S) -> Self {
+    pub fn with_description<S: Into<String>>(mut self, description: S) -> Self {
         self.core = self.core.description(description);
+        self
+    }
+
+    pub fn with_parent(mut self, parent_id: Uuid) -> Self {
+        self.parents.push(parent_id);
+        self
+    }
+
+    pub fn with_tag<S, V>(mut self, key: S, values: V) -> Self
+    where
+        S: Into<String>,
+        V: IntoIterator<Item = S>,
+    {
+        self.core = self.core.tag(key, values);
         self
     }
 

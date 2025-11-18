@@ -92,26 +92,32 @@ impl RegistrationApi {
         // Register resources in order
         debug!("Registering nodes...");
         for node in model.nodes().await.values() {
+            debug!("registering: {node:?}");
             Self::register_resource(client, resource_url, node, api_version).await?;
         }
         debug!("Registering devices...");
         for device in model.devices().await.values() {
+            debug!("registering: {device:?}");
             Self::register_resource(client, resource_url, device, api_version).await?;
         }
         debug!("Registering sources...");
         for source in model.sources().await.values() {
+            debug!("registering: {source:?}");
             Self::register_resource(client, resource_url, source, api_version).await?;
         }
         debug!("Registering flows...");
         for flow in model.flows().await.values() {
+            debug!("registering: {flow:?}");
             Self::register_resource(client, resource_url, flow, api_version).await?;
         }
         debug!("Registering senders...");
         for sender in model.senders().await.values() {
+            debug!("registering: {sender:?}");
             Self::register_resource(client, resource_url, sender, api_version).await?;
         }
         debug!("Registering receivers...");
         for receiver in model.receivers().await.values() {
+            debug!("registering: {receiver:?}");
             Self::register_resource(client, resource_url, receiver, api_version).await?;
         }
 
