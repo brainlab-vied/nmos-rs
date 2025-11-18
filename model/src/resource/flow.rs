@@ -44,8 +44,8 @@ impl FlowBuilder {
             source_id: source.core.id,
             device_id: device.core.id,
             parents: Vec::new(),
-            frame_height: 640,
-            frame_width: 480,
+            frame_height: 0,
+            frame_width: 0,
             media_type: String::default(),
             colorspace: String::default(),
             grain_rate: None,
@@ -84,7 +84,7 @@ impl FlowBuilder {
         self
     }
 
-    pub fn tag<S, V>(mut self, key: S, values: V) -> Self
+    pub fn with_tag<S, V>(mut self, key: S, values: V) -> Self
     where
         S: Into<String>,
         V: IntoIterator<Item = S>,

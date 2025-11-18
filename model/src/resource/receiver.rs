@@ -48,12 +48,12 @@ impl ReceiverBuilder {
         }
     }
 
-    pub fn description<S: Into<String>>(mut self, description: S) -> Self {
+    pub fn with_description<S: Into<String>>(mut self, description: S) -> Self {
         self.core = self.core.description(description);
         self
     }
 
-    pub fn tag<S, V>(mut self, key: S, values: V) -> Self
+    pub fn with_tag<S, V>(mut self, key: S, values: V) -> Self
     where
         S: Into<String>,
         V: IntoIterator<Item = S>,

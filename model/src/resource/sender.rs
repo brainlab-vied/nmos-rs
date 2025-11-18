@@ -47,16 +47,16 @@ impl SenderBuilder {
             flow_id: flow.core.id,
             transport,
             device_id: device.core.id,
-            manifest_href: None,
+            manifest_href: Some("http://localhost".to_string()),
         }
     }
 
-    pub fn description<S: Into<String>>(mut self, description: S) -> Self {
+    pub fn with_description<S: Into<String>>(mut self, description: S) -> Self {
         self.core = self.core.description(description);
         self
     }
 
-    pub fn tag<S, V>(mut self, key: S, values: V) -> Self
+    pub fn with_tag<S, V>(mut self, key: S, values: V) -> Self
     where
         S: Into<String>,
         V: IntoIterator<Item = S>,
@@ -65,7 +65,7 @@ impl SenderBuilder {
         self
     }
 
-    pub fn manifest<S: Into<String>>(mut self, manifest: S) -> Self {
+    pub fn with_manifest<S: Into<String>>(mut self, manifest: S) -> Self {
         // TODO: Store manifest and generate href
         self.manifest_href = Some(manifest.into());
         self
@@ -79,7 +79,7 @@ impl SenderBuilder {
             transport: self.transport,
             device_id: self.device_id,
             manifest_href: self.manifest_href.unwrap_or_default(),
-            caps: None,
+            caps: Some(BTreeMap::default()),
         }
     }
 }
@@ -161,7 +161,7 @@ impl Into<v1_3_x::Sender> for Sender {
             flow_id: Some(self.flow_id.to_string()),
             tags: self.core.tags_json(),
             device_id: self.device_id.to_string(),
-            manifest_href: None,
+            manifest_href: Some("http://localhost".to_string()),
             subscription: v1_3_x::SenderSubscription {
                 active: false,
                 receiver_id: None,
